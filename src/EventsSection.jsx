@@ -29,27 +29,46 @@ const slideVariants = {
 };
 
 // Sample event data
-const events = [
+const pastEvents = [
   {
-    id: 1,
-    title: "National Level Competition – CodeVista 5.0",
-    date: "25th & 28th February 2025",
-    location: "G H Raisoni College Of Engineering, Wagholi, Pune",
-    image: vista,
+    title: "AI chatbot competition",
+    date: "19 Sept 2025",
+    description: "A 24-hour hackathon where participants built AI chatbots to solve real-world problems, showcasing innovation and technical skills.",
+    images: [
+      "../assets/events/chatbot1.png",
+      "../assets/events/chatbot1.png",
+      "../assets/events/chatbot1.png",
+    ],
   },
   {
-    id: 2,
-    title: "Python Workshop",
-    date: "29th & 30th August 2024",
-    location: "E-108, G H Raisoni College of Engineering",
-    image: python,
+    title: "CodeVista 5.0",
+    date: "25-28 Feb 2025",
+    description: "A national-level coding event with an online technical quiz and offline coding rounds, organized by AI & Coding Club and Society for Data Science.",
+    images: [
+      "../assets/events/codevista1.png",
+      "../assets/events/codevista2.png",
+      "../assets/events/codevista3.png",
+    ],
   },
   {
-    id: 3,
-    title: "C Code Craft: C Challenge Competition",
-    date: "27th July 2024",
-    location: "G H Raisoni College Of Engineering & Management",
-    image: code,
+    title: "Gen AI workshop",
+    date: "01 Feb 2025",
+    description: "An intensive bootcamp focused on data science and analytics, providing hands-on sessions and real-world project experience.",
+    images: [
+      "../assets/events/genAI1.png",
+      "../assets/events/genAI2.png",
+      "../assets/events/genAI3.png",
+    ],
+  },
+  {
+    title: "AI tools and prompt engineering session",
+    date: "23 Aug 2025",
+    description: "Interactive talks and discussions on cutting-edge AI tools, machine learning techniques, and effective prompt engineering strategies.",
+    images: [
+      "https://via.placeholder.com/600x400/4CAF50/FFFFFF?text=ML+Symposium+Slide1",
+      "https://via.placeholder.com/600x400/2E7D32/FFFFFF?text=ML+Symposium+Slide2",
+      "https://via.placeholder.com/600x400/1B5E20/FFFFFF?text=ML+Symposium+Slide3",
+    ],
   },
 ];
 
