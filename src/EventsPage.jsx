@@ -7,6 +7,12 @@ import {
   VerticalTimelineElement,
 } from "react-vertical-timeline-component";
 import "react-vertical-timeline-component/style.min.css";
+import { createClient } from "@supabase/supabase-js";
+
+// --- Supabase Client ---
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+const supabase = createClient(supabaseUrl, supabaseKey);
 
 // --- Registration Modal ---
 const RegistrationModal = ({ event, onClose, onRegister }) => {
@@ -40,7 +46,7 @@ const RegistrationModal = ({ event, onClose, onRegister }) => {
         {!isRegistered ? (
           <>
             <h2 className="text-2xl font-bold text-white mb-4">
-              Register for {event.name}
+              Register for {event.event_name}
             </h2>
             <form onSubmit={handleSubmit} className="space-y-4">
               {[
@@ -119,19 +125,16 @@ const RegistrationModal = ({ event, onClose, onRegister }) => {
   );
 };
 
-// --- Event Card with Automatic Slideshow + Dots ---
+// --- Event Card with Slideshow ---
 const EventCard = ({ title, date, description, images }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
 
   const nextSlide = () =>
     setCurrentIndex((prev) => (prev + 1) % images.length);
 
-  // Auto slideshow effect
   useEffect(() => {
     if (images && images.length > 1) {
-      const interval = setInterval(() => {
-        nextSlide();
-      }, 3000); // 3 seconds per slide
+      const interval = setInterval(nextSlide, 3000);
       return () => clearInterval(interval);
     }
   }, [images]);
@@ -179,64 +182,32 @@ const EventsPage = () => {
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [registrations, setRegistrations] = useState([]);
   const [futureEvents, setFutureEvents] = useState([]);
-
-  // Past events with 3 images each
-  const pastEvents = [
-    {
-      title: "AI Workshop 2023",
-      date: "Sun Oct 15 2023",
-      description: "A hands-on workshop covering the basics of AI and ML.",
-      images: [
-        "https://via.placeholder.com/600x400/FFB74D/000000?text=AI+Workshop+2023+Slide1",
-        "https://via.placeholder.com/600x400/FF9800/FFFFFF?text=AI+Workshop+2023+Slide2",
-        "https://via.placeholder.com/600x400/F57C00/FFFFFF?text=AI+Workshop+2023+Slide3",
-      ],
-    },
-    {
-      title: "Hackathon 2023",
-      date: "Sun Dec 10 2023",
-      description:
-        "A 24-hour hackathon focused on solving real-world problems with AI.",
-      images: [
-        "https://via.placeholder.com/600x400/3F51B5/FFFFFF?text=Hackathon+2023+Slide1",
-        "https://via.placeholder.com/600x400/283593/FFFFFF?text=Hackathon+2023+Slide2",
-        "https://via.placeholder.com/600x400/1A237E/FFFFFF?text=Hackathon+2023+Slide3",
-      ],
-    },
-    {
-      title: "Data Science Bootcamp",
-      date: "Tue Mar 05 2024",
-      description: "An intensive bootcamp on data science and analytics.",
-      images: [
-        "https://via.placeholder.com/600x400/009688/FFFFFF?text=Data+Science+Bootcamp+Slide1",
-        "https://via.placeholder.com/600x400/00796B/FFFFFF?text=Data+Science+Bootcamp+Slide2",
-        "https://via.placeholder.com/600x400/004D40/FFFFFF?text=Data+Science+Bootcamp+Slide3",
-      ],
-    },
-    {
-      title: "Machine Learning Symposium",
-      date: "Sat May 18 2024",
-      description: "Talks and discussions on the latest in machine learning.",
-      images: [
-        "https://via.placeholder.com/600x400/4CAF50/FFFFFF?text=ML+Symposium+Slide1",
-        "https://via.placeholder.com/600x400/2E7D32/FFFFFF?text=ML+Symposium+Slide2",
-        "https://via.placeholder.com/600x400/1B5E20/FFFFFF?text=ML+Symposium+Slide3",
-      ],
-    },
-  ];
+  const [pastEvents, setPastEvents] = useState([]);
 
   useEffect(() => {
     const fetchEvents = async () => {
-      try {
-        const res = await fetch("http://localhost:5000/api/events");
-        const data = await res.json();
-        const now = new Date();
-        const upcoming = data.filter((event) => new Date(event.date) >= now);
-        setFutureEvents(upcoming);
-      } catch (err) {
-        console.error("Error fetching events:", err);
+      const { data, error } = await supabase
+        .from("events")
+        .select("*")
+        .order("date", { ascending: true });
+
+      if (error) {
+        console.error("Error fetching events:", error);
+        return;
       }
+
+      const now = new Date();
+      const upcoming = data.filter(
+        (event) => event.date && new Date(event.date) >= now
+      );
+      const past = data.filter(
+        (event) => event.date && new Date(event.date) < now
+      );
+
+      setFutureEvents(upcoming);
+      setPastEvents(past);
     };
+
     fetchEvents();
   }, []);
 
@@ -265,7 +236,7 @@ const EventsPage = () => {
           transition={{ duration: 0.6, delay: 0.2 }}
           className="max-w-3xl mx-auto text-lg text-gray-300"
         >
-          Explore our past and upcoming events created by admins.
+          Explore our past and upcoming events.
         </motion.p>
       </section>
 
@@ -281,34 +252,34 @@ const EventsPage = () => {
           Upcoming Events
         </motion.h2>
         <VerticalTimeline>
-          {futureEvents.map((event, index) => (
+          {futureEvents.map((event) => (
             <VerticalTimelineElement
-              key={index}
+              key={event.id}
               contentStyle={{ background: "#1e293b", color: "#fff" }}
               contentArrowStyle={{ borderRight: "7px solid #1e293b" }}
               date={new Date(event.date).toDateString()}
               iconStyle={{ background: "#ec4899", color: "#fff" }}
               icon={
-                event.posterImage ? (
+                event.poster_url ? (
                   <img
-                    src={event.posterImage}
-                    alt={event.name}
+                    src={event.poster_url}
+                    alt={event.event_name}
                     className="w-full h-full object-cover rounded-full"
                   />
                 ) : null
               }
             >
-              {event.posterImage && (
+              {event.poster_url && (
                 <img
-                  src={event.posterImage}
-                  alt={event.name}
+                  src={event.poster_url}
+                  alt={event.event_name}
                   className="w-full h-40 object-cover rounded-lg mb-4"
                 />
               )}
-              <h3 className="text-xl font-bold">{event.name}</h3>
+              <h3 className="text-xl font-bold">{event.event_name}</h3>
               <p className="text-gray-300 my-2">{event.description}</p>
 
-              {event.registrationOpen && (
+              {event.registration_open && (
                 <button
                   onClick={() => handleRegister(event)}
                   className="bg-gradient-to-r from-pink-500 to-orange-500 text-white px-4 py-2 rounded-lg mt-4"
@@ -333,13 +304,13 @@ const EventsPage = () => {
           Past Events
         </motion.h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          {pastEvents.map((event, index) => (
+          {pastEvents.map((event) => (
             <EventCard
-              key={index}
-              title={event.title}
-              date={event.date}
+              key={event.id}
+              title={event.event_name}
+              date={new Date(event.date).toDateString()}
               description={event.description}
-              images={event.images}
+              images={event.poster_url ? [event.poster_url] : []}
             />
           ))}
         </div>

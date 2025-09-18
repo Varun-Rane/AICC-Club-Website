@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
-import axios from "axios";
+import { supabase } from "./supabaseClient"; // your supabase client
 
 import Navigation from "./Navigation";
 import Home from "./Home";
@@ -14,37 +14,67 @@ import AdminDashboard from "./AdminDashboard";
 import AdminEventsPage from "./AdminEventsPage";
 
 const App = () => {
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState(null); // supabase user
+  const [profile, setProfile] = useState(null); // profile from DB
   const [loading, setLoading] = useState(true);
 
-  // Fetch logged-in user on app load
+  // Fetch logged-in user + profile
   useEffect(() => {
-    const fetchUser = async () => {
-      const token = localStorage.getItem("token");
-      if (!token) {
+    const getUser = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user) {
         setLoading(false);
         return;
       }
 
-      try {
-        const response = await axios.get("http://localhost:5000/api/user", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        setUser(response.data); // { id, name, email, role, isAdmin, ... }
-      } catch (error) {
-        console.error("Failed to fetch user:", error.response?.data || error);
-        localStorage.removeItem("token");
-      } finally {
-        setLoading(false);
+      setUser(user);
+
+      // fetch profile from "profiles" table
+      const { data: profileData, error } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", user.id)
+        .single();
+
+      if (error) {
+        console.error("Error fetching profile:", error);
+      } else {
+        setProfile(profileData);
       }
+
+      setLoading(false);
     };
 
-    fetchUser();
+    getUser();
+
+    // subscribe to auth state changes
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        setUser(session.user);
+        supabase
+          .from("profiles")
+          .select("*")
+          .eq("id", session.user.id)
+          .single()
+          .then(({ data }) => setProfile(data));
+      } else {
+        setUser(null);
+        setProfile(null);
+      }
+    });
+
+    return () => {
+      listener.subscription.unsubscribe();
+    };
   }, []);
 
-  const handleLogout = () => {
-    localStorage.removeItem("token");
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
     setUser(null);
+    setProfile(null);
   };
 
   // Protect routes for logged-in users
@@ -57,13 +87,13 @@ const App = () => {
   // Protect routes for admin users only
   const AdminRoute = ({ children }) => {
     if (loading) return <div className="text-white text-center p-8">Loading...</div>;
-    if (!user?.isAdmin) return <Navigate to="/" replace />;
+    if (profile?.role !== "admin") return <Navigate to="/" replace />;
     return children;
   };
 
   return (
     <Router>
-      <Navigation user={user} onLogout={handleLogout} isAdmin={user?.isAdmin} />
+      <Navigation user={profile} onLogout={handleLogout} isAdmin={profile?.role === "admin"} />
       <Routes>
         {/* Authentication */}
         <Route path="/auth" element={<AuthPage setUser={setUser} />} />
@@ -73,7 +103,7 @@ const App = () => {
           path="/"
           element={
             <ProtectedRoute>
-              {user?.isAdmin ? <Navigate to="/admin/events" replace /> : <Home />}
+              {profile?.role === "admin" ? <Navigate to="/admin/events" replace /> : <Home />}
             </ProtectedRoute>
           }
         />
@@ -89,7 +119,7 @@ const App = () => {
           path="/events"
           element={
             <ProtectedRoute>
-              {user?.isAdmin ? <Navigate to="/admin/events" replace /> : <EventsPage />}
+              {profile?.role === "admin" ? <Navigate to="/admin/events" replace /> : <EventsPage />}
             </ProtectedRoute>
           }
         />
@@ -105,7 +135,7 @@ const App = () => {
           path="/user-dashboard"
           element={
             <ProtectedRoute>
-              <UserDashboard user={user} />
+              <UserDashboard user={profile} />
             </ProtectedRoute>
           }
         />

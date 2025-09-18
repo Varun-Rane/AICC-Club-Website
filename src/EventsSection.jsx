@@ -1,62 +1,62 @@
 /* eslint-disable no-unused-vars */
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { FiCalendar, FiClock, FiMapPin, FiArrowLeft, FiArrowRight } from "react-icons/fi";
+import {
+  FiCalendar,
+  FiMapPin,
+  FiArrowLeft,
+  FiArrowRight,
+} from "react-icons/fi";
+import code from "../assets/code.jpg";
+import python from "../assets/python.jpg";
+import vista from "../assets/vista.jpg";
 
 // Slide animation variants
 const slideVariants = {
   enter: (direction) => ({
     x: direction > 0 ? 1000 : -1000,
-    opacity: 0
+    opacity: 0,
   }),
   center: {
     zIndex: 1,
     x: 0,
-    opacity: 1
+    opacity: 1,
   },
   exit: (direction) => ({
     x: direction < 0 ? 1000 : -1000,
-    opacity: 0
-  })
+    opacity: 0,
+  }),
 };
 
 // Sample event data
 const events = [
   {
     id: 1,
-    title: "AI Hackathon 2023",
-    date: "October 15, 2023",
-    time: "10:00 AM - 6:00 PM",
-    location: "Tech Campus, Auditorium",
-    attendees: 120,
-    description: "A full-day hackathon focused on AI and machine learning projects with mentorship from industry experts.",
-    image: "https://source.unsplash.com/random/800x500/?hackathon"
+    title: "National Level Competition – CodeVista 5.0",
+    date: "25th & 28th February 2025",
+    location: "G H Raisoni College Of Engineering, Wagholi, Pune",
+    image: vista,
   },
   {
     id: 2,
-    title: "Web Development Workshop",
-    date: "November 5, 2023",
-    time: "2:00 PM - 5:00 PM",
-    location: "Online (Zoom)",
-    attendees: 85,
-    description: "Hands-on workshop covering modern web development techniques including React, Node.js, and responsive design.",
-    image: "https://source.unsplash.com/random/800x500/?webdev"
+    title: "Python Workshop",
+    date: "29th & 30th August 2024",
+    location: "E-108, G H Raisoni College of Engineering",
+    image: python,
   },
   {
     id: 3,
-    title: "Tech Talk: Future of AI",
-    date: "December 10, 2023",
-    time: "6:00 PM - 8:00 PM",
-    location: "Main Conference Hall",
-    attendees: 200,
-    description: "Expert panel discussion on the future of artificial intelligence with Q&A session for attendees.",
-    image: "https://source.unsplash.com/random/800x500/?ai"
-  }
+    title: "C Code Craft: C Challenge Competition",
+    date: "27th July 2024",
+    location: "G H Raisoni College Of Engineering & Management",
+    image: code,
+  },
 ];
 
 const EventsSection = () => {
   const [[currentIndex, direction], setCurrentIndex] = useState([0, 0]);
   const [autoPlay, setAutoPlay] = useState(true);
+  const [selectedEvent, setSelectedEvent] = useState(null); // modal state
 
   // Auto-advance slides
   useEffect(() => {
@@ -84,11 +84,14 @@ const EventsSection = () => {
   return (
     <section className="relative py-24 px-4 overflow-hidden bg-gray-900 text-white">
       {/* Gradient Background */}
-      <div className="absolute inset-0 -z-10"
-           style={{
-             background: "linear-gradient(270deg, #0b0e17, #1a1f2c, #24243e, #1a1f2c, #0b0e17)",
-             backgroundSize: "400% 400%"
-           }}></div>
+      <div
+        className="absolute inset-0 -z-10"
+        style={{
+          background:
+            "linear-gradient(270deg, #0b0e17, #1a1f2c, #24243e, #1a1f2c, #0b0e17)",
+          backgroundSize: "400% 400%",
+        }}
+      ></div>
 
       <div className="max-w-6xl mx-auto relative z-10">
         {/* Heading */}
@@ -118,7 +121,7 @@ const EventsSection = () => {
                 exit="exit"
                 transition={{
                   x: { type: "spring", stiffness: 300, damping: 30 },
-                  opacity: { duration: 0.2 }
+                  opacity: { duration: 0.2 },
                 }}
                 className="relative h-full"
               >
@@ -143,26 +146,15 @@ const EventsSection = () => {
                         <FiCalendar className="text-pink-400" />
                         <span>{events[currentIndex].date}</span>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <FiClock className="text-orange-400" />
-                        <span>{events[currentIndex].time}</span>
-                      </div>
                       <div className="flex items-center gap-2 col-span-2">
                         <FiMapPin className="text-purple-400" />
                         <span>{events[currentIndex].location}</span>
                       </div>
                     </div>
-                    <motion.p
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.3 }}
-                      className="text-gray-300 mb-6 max-w-md"
-                    >
-                      {events[currentIndex].description}
-                    </motion.p>
                     <motion.button
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
+                      onClick={() => setSelectedEvent(events[currentIndex])}
                       className="px-6 py-3 text-sm font-medium rounded-full bg-gradient-to-r from-pink-500 to-orange-500 text-white w-fit"
                     >
                       View Details
@@ -196,7 +188,7 @@ const EventsSection = () => {
                 key={index}
                 onClick={() => goToSlide(index)}
                 className={`w-3 h-3 rounded-full transition-all ${
-                  index === currentIndex ? 'bg-pink-500 w-8' : 'bg-gray-600'
+                  index === currentIndex ? "bg-pink-500 w-8" : "bg-gray-600"
                 }`}
               />
             ))}
@@ -208,11 +200,118 @@ const EventsSection = () => {
               onClick={() => setAutoPlay(!autoPlay)}
               className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors text-sm"
             >
-              {autoPlay ? '⏸ Pause' : '▶ Play'} Slideshow
+              {autoPlay ? "⏸ Pause" : "▶ Play"} Slideshow
             </button>
           </div>
         </div>
       </div>
+
+      {/* ================= MODAL ================= */}
+      <AnimatePresence>
+        {selectedEvent && (
+          <motion.div
+            className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <motion.div
+              className="bg-gray-900 text-white rounded-2xl shadow-2xl max-w-2xl w-full p-6 relative"
+              initial={{ y: 100, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: 100, opacity: 0 }}
+              transition={{ type: "spring", stiffness: 120 }}
+            >
+              {/* Close Button */}
+              <button
+                onClick={() => setSelectedEvent(null)}
+                className="absolute top-3 right-3 text-gray-400 hover:text-white text-xl"
+              >
+                ✖
+              </button>
+
+              {/* Title */}
+              <h3 className="text-2xl font-bold mb-2">{selectedEvent.title}</h3>
+              <p className="text-sm text-gray-400 mb-4">{selectedEvent.date}</p>
+
+              {/* Full Info based on ID */}
+              {selectedEvent.id === 1 && (
+                <>
+                  <p className="mb-4">
+                    The Department of AI & AIML, in association with the AI & Coding
+                    Club (AICC) and Society for Data Science (S4DS), organized CodeVista
+                    5.0, a national-level coding competition with two rounds – an online
+                    technical quiz and an offline coding round.
+                  </p>
+                  <p className="mb-4">
+                    The event saw <b>674 registrations</b>, including participants from
+                    reputed institutes such as AIT, VIIT, PICT, IIT Madras, and IIT
+                    Patna. From these, <b>100 finalists</b> competed in the offline round
+                    at GHRCEM, Pune. A panel discussion by industry experts further
+                    enriched the event.
+                  </p>
+                  <h4 className="font-semibold text-lg mb-2">
+                    🏆 Winners & Cash Prizes:
+                  </h4>
+                  <ul className="list-disc list-inside mb-4">
+                    <li>Rishi Kumar Singh – 1st Prize</li>
+                    <li>Roshan Gupta – 2nd Prize</li>
+                    <li>Sumit Choudhary – 3rd Prize</li>
+                  </ul>
+                  <p>
+                    CodeVista 5.0 successfully provided a platform for young coders to
+                    showcase their skills while fostering innovation and
+                    entrepreneurship.
+                  </p>
+                </>
+              )}
+
+              {selectedEvent.id === 2 && (
+                <>
+                  <p className="mb-4">
+                    The Department of AI & AIML, in association with the AI & Coding
+                    Club (AICC), organized a two-day{" "}
+                    <b>Python Workshop on 29th & 30th August 2024</b>.
+                  </p>
+                  <p className="mb-4">
+                    This hands-on workshop provided a practical platform for aspiring
+                    programmers to dive into the world of Python. Participants explored
+                    everything from <b>fundamentals</b> to <b>building functional
+                    projects</b>, guided by expert mentors.
+                  </p>
+                  <p>
+                    The event witnessed enthusiastic participation, with students gaining
+                    <b> real-world coding experience</b> and improving their confidence in
+                    problem-solving using Python.
+                  </p>
+                </>
+              )}
+
+              {selectedEvent.id === 3 && (
+                <>
+                  <p className="mb-4">
+                    The Department of AI & AIML, in association with the AI & Coding
+                    Club (AICC), organized the{" "}
+                    <b>C Code Craft: C Challenge Competition</b> on{" "}
+                    <b>27th July 2024</b>.
+                  </p>
+                  <p className="mb-4">The competition was conducted in two rounds:</p>
+                  <ul className="list-disc list-inside mb-4">
+                    <li>✅ Round 1: Quiz on C programming fundamentals</li>
+                    <li>✅ Round 2: Coding challenge based on problem statements</li>
+                  </ul>
+                  <p>
+                    The event witnessed participation from <b>100+ students</b>, who
+                    showcased excellent coding and problem-solving abilities. Winners
+                    were awarded prizes & certificates, while all participants gained
+                    <b> valuable hands-on experience</b> in C programming.
+                  </p>
+                </>
+              )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </section>
   );
 };

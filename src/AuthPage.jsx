@@ -1,55 +1,95 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
+import { supabase } from "../src/supabaseClient"; // ✅ ensure correct path
 
 const AuthPage = ({ setUser }) => {
   const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
   const [college, setCollege] = useState("");
   const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLogin, setIsLogin] = useState(true);
-  const [isAdminLogin, setIsAdminLogin] = useState(false);
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
+    setSuccess("");
 
     try {
       if (isLogin) {
-        // 🔹 Login
-        const response = await axios.post("http://localhost:5000/api/login", {
-          email,
-          password,
-          isAdmin: isAdminLogin,
+        // 🔹 LOGIN
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email: email.trim().toLowerCase(),
+          password: password.trim(),
+        });
+      
+        if (error) throw error;
+        const user = data.user;
+      
+        // 🔹 Fetch full profile for role-based routing
+        const { data: profile, error: profileError } = await supabase
+          .from("profiles")
+          .select("id, email, name, college, phone, role")
+          .eq("id", user.id)
+          .maybeSingle();
+      
+        if (profileError) throw profileError;
+      
+        // 🔹 Merge auth user + profile into one object
+        const fullUser = {
+          ...user,
+          ...profile, // includes role, name, college, phone, email
+        };
+      
+        setUser(fullUser);
+      
+        // ✅ Role-based navigation
+        if (fullUser.role === "admin") {
+          navigate("/admin-dashboard");
+        } else {
+          navigate("/user-dashboard");
+        }
+      }
+       else {
+        // 🔹 SIGN UP
+        const { data, error } = await supabase.auth.signUp({
+          email: email.trim().toLowerCase(),
+          password: password.trim(),
         });
 
-        const { token, user } = response.data;
+        if (error) throw error;
 
-        // Store token in localStorage
-        localStorage.setItem("token", token);
-        setUser(user);
+        if (data.user) {
+          // Insert into profiles table
+          const { error: profileError } = await supabase.from("profiles").insert([
+            {
+              id: data.user.id,
+              email: data.user.email,
+              name,
+              college,
+              phone,
+              role: "user", // default role
+            },
+          ]);
 
-        // Redirect based on role
-        navigate(user.isAdmin ? "/admin/events" : "/user-dashboard");
-      } else {
-        // 🔹 Register
-        await axios.post("http://localhost:5000/api/register", {
-          name,
-          email,
-          college,
-          phone,
-          password,
-        });
+          if (profileError) throw profileError;
+        }
 
-        setIsLogin(true);
-        setError("Registration successful! Please login.");
+        setSuccess("✅ Signup successful! Please check your email to confirm.");
+        setName("");
+        setCollege("");
+        setPhone("");
+        setEmail("");
+        setPassword("");
+
+        setTimeout(() => setIsLogin(true), 2500);
       }
     } catch (err) {
-      console.error("Auth error:", err.response?.data || err);
-      setError(err.response?.data?.error || "An error occurred");
+      setError(err.message || "Something went wrong.");
     }
   };
 
@@ -66,6 +106,12 @@ const AuthPage = ({ setUser }) => {
           </div>
         )}
 
+        {success && (
+          <div className="bg-green-900/30 border border-green-500 text-green-300 px-4 py-2 rounded-lg mb-4 text-center">
+            {success}
+          </div>
+        )}
+
         <form onSubmit={handleSubmit} className="space-y-4">
           {!isLogin && (
             <>
@@ -79,6 +125,7 @@ const AuthPage = ({ setUser }) => {
                   required
                 />
               </div>
+
               <div>
                 <label className="block text-sm mb-1">College</label>
                 <input
@@ -89,10 +136,11 @@ const AuthPage = ({ setUser }) => {
                   required
                 />
               </div>
+
               <div>
                 <label className="block text-sm mb-1">Phone</label>
                 <input
-                  type="text"
+                  type="tel"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   className="w-full px-4 py-2 bg-gray-700 rounded-lg"
@@ -124,18 +172,6 @@ const AuthPage = ({ setUser }) => {
             />
           </div>
 
-          {isLogin && (
-            <div className="flex items-center">
-              <input
-                type="checkbox"
-                checked={isAdminLogin}
-                onChange={(e) => setIsAdminLogin(e.target.checked)}
-                className="h-4 w-4 text-pink-500"
-              />
-              <label className="ml-2 text-sm">Login as Admin</label>
-            </div>
-          )}
-
           <button
             type="submit"
             className="w-full px-4 py-2 bg-gradient-to-r from-pink-500 to-orange-500 text-white rounded-lg hover:scale-105 transition-transform"
@@ -152,6 +188,7 @@ const AuthPage = ({ setUser }) => {
               onClick={() => {
                 setIsLogin(!isLogin);
                 setError("");
+                setSuccess("");
               }}
               className="text-pink-400 hover:underline font-medium"
             >

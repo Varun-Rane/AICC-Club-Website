@@ -13,6 +13,7 @@
     "@appletosolutions/reactbits": "^1.0.3",
     "@react-three/drei": "^9.56.27",
     "@react-three/fiber": "^8.11.4",
+    "@supabase/supabase-js": "^2.57.4",
     "@tailwindcss/vite": "^4.1.12",
     "axios": "^1.12.1",
     "framer-motion": "^12.23.12",

@@ -22,7 +22,7 @@ const Navigation = ({ user, isAdmin, onLogout }) => {
             <img src={club} className="text-white font-bold text-lg"></img>
           </div>
           <div>
-            <div className="text-[10px] text-gray-300">AI</div>
+            <div className="text-[15px] text-gray-300">AI &</div>
             <div className="font-bold text-transparent bg-clip-text bg-gradient-to-r from-pink-400 to-orange-400 text-sm">
               Coding Club
             </div>
