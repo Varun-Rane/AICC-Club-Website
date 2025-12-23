@@ -63,7 +63,7 @@ const TeamPage = () => {
         initials: "VR",
         bio: "",
         skills: [],
-        image: "../assets/aiccTeam/varun.jpg",
+        image: "",
       },
       coHeads: [
         {

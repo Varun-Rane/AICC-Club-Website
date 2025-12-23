@@ -4,26 +4,41 @@ import { motion } from 'framer-motion';
 import QRCode from 'react-qr-code';
 import { FiDownload, FiUser, FiCalendar, FiMail, FiPhone, FiBook, FiAward, FiX } from 'react-icons/fi';
 import html2canvas from 'html2canvas';
+import { createClient } from '@supabase/supabase-js';
+
+// ================= Supabase Setup =================
+const supabase = createClient(
+  import.meta.env.VITE_SUPABASE_URL,
+  import.meta.env.VITE_SUPABASE_ANON_KEY
+);
 
 const UserDashboard = ({ user }) => {
   const [registrations, setRegistrations] = useState([]);
   const [selectedTicket, setSelectedTicket] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [events, setEvents] = useState([]);
 
+  // ✅ Fetch registrations for the logged-in user
   useEffect(() => {
-    const storedRegistrations = JSON.parse(localStorage.getItem("registrations")) || [];
-    const userRegistrations = storedRegistrations.filter(
-      registration => registration.email === user.email
-    );
-    setRegistrations(userRegistrations);
+    const fetchRegistrations = async () => {
+      const { data, error } = await supabase
+        .from("registrations")
+        .select("*, event:events(*)") // join with events table
+        .eq("email", user.email);
 
-    const storedEvents = JSON.parse(localStorage.getItem("events")) || [];
-    setEvents(storedEvents);
+      if (error) {
+        console.error("Error fetching registrations:", error);
+      } else {
+        setRegistrations(data);
+      }
+      setIsLoading(false);
+    };
 
-    setIsLoading(false);
+    if (user?.email) {
+      fetchRegistrations();
+    }
   }, [user]);
 
+  // Ticket handling
   const downloadTicket = (ticket) => {
     setSelectedTicket(ticket);
   };
@@ -37,23 +52,12 @@ const UserDashboard = ({ user }) => {
     if (ticketElement) {
       html2canvas(ticketElement, { scale: 2 }).then(canvas => {
         const link = document.createElement('a');
-        link.download = `AICC-Ticket-${selectedTicket.ticketId}.png`;
+        link.download = `AICC-Ticket-${selectedTicket.ticket_id}.png`;
         link.href = canvas.toDataURL('image/png');
         link.click();
         closeTicketPreview();
       });
     }
-  };
-
-  const isRegistrationOpen = (eventTitle) => {
-    const event = events.find(e => e.title === eventTitle);
-    if (!event || !event.startTime || !event.endTime) return false;
-
-    const now = new Date();
-    const startTime = new Date(event.startTime);
-    const endTime = new Date(event.endTime);
-
-    return now >= startTime && now <= endTime;
   };
 
   return (
@@ -145,7 +149,7 @@ const UserDashboard = ({ user }) => {
               >
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                   <div>
-                    <h3 className="text-2xl font-bold text-white">{registration.event.title}</h3>
+                    <h3 className="text-2xl font-bold text-white">{registration.event.event_name}</h3>
                     <p className="text-gray-400 mt-1">{registration.event.date}</p>
                     <p className="text-gray-300 mt-2">{registration.event.description}</p>
                   </div>
@@ -192,7 +196,7 @@ const UserDashboard = ({ user }) => {
             <div className="space-y-4 mb-6">
               <div className="flex justify-between">
                 <span className="text-gray-600">Event:</span>
-                <span className="font-medium">{selectedTicket.event.title}</span>
+                <span className="font-medium">{selectedTicket.event.event_name}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-600">Date:</span>
@@ -204,15 +208,15 @@ const UserDashboard = ({ user }) => {
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-600">Ticket ID:</span>
-                <span className="font-bold text-pink-600">{selectedTicket.ticketId}</span>
+                <span className="font-bold text-pink-600">{selectedTicket.ticket_id}</span>
               </div>
             </div>
             <div className="flex justify-center mb-4">
               <QRCode
                 value={JSON.stringify({
                   name: selectedTicket.name,
-                  ticketId: selectedTicket.ticketId,
-                  event: selectedTicket.event.title,
+                  ticketId: selectedTicket.ticket_id,
+                  event: selectedTicket.event.event_name,
                   date: selectedTicket.event.date
                 })}
                 size={128}

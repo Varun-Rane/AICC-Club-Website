@@ -1,15 +1,8 @@
+/* eslint-disable react-hooks/rules-of-hooks */
 /* eslint-disable no-unused-vars */
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import {
-  FiCalendar,
-  FiMapPin,
-  FiArrowLeft,
-  FiArrowRight,
-} from "react-icons/fi";
-import code from "../assets/code.jpg";
-import python from "../assets/python.jpg";
-import vista from "../assets/vista.jpg";
+import { FiCalendar, FiClock, FiMapPin, FiArrowLeft, FiArrowRight } from "react-icons/fi";
 
 // Slide animation variants
 const slideVariants = {
@@ -28,72 +21,61 @@ const slideVariants = {
   }),
 };
 
-// Sample event data
+// Hardcoded past events data
 const pastEvents = [
   {
-    title: "AI chatbot competition",
+    title: "AI Chatbot Competition",
     date: "19 Sept 2025",
-    description: "A 24-hour hackathon where participants built AI chatbots to solve real-world problems, showcasing innovation and technical skills.",
-    images: [
-      "../assets/events/chatbot1.png",
-      "../assets/events/chatbot1.png",
-      "../assets/events/chatbot1.png",
-    ],
+    time: "10:00 AM - 6:00 PM",
+    location: "GHRCEM Pune",
+    description:
+      "24-hour hackathon where participants built AI chatbots to solve real-world problems.",
+      images: [
+        "../assets/events/chatbot1.png",
+        "../assets/events/chatbot1.png",
+        "../assets/events/chatbot1.png",
+      ],
   },
   {
     title: "CodeVista 5.0",
     date: "25-28 Feb 2025",
-    description: "A national-level coding event with an online technical quiz and offline coding rounds, organized by AI & Coding Club and Society for Data Science.",
-    images: [
-      "../assets/events/codevista1.png",
-      "../assets/events/codevista2.png",
-      "../assets/events/codevista3.png",
-    ],
-  },
-  {
-    title: "Gen AI workshop",
-    date: "01 Feb 2025",
-    description: "An intensive bootcamp focused on data science and analytics, providing hands-on sessions and real-world project experience.",
-    images: [
-      "../assets/events/genAI1.png",
-      "../assets/events/genAI2.png",
-      "../assets/events/genAI3.png",
-    ],
-  },
-  {
-    title: "AI tools and prompt engineering session",
-    date: "23 Aug 2025",
-    description: "Interactive talks and discussions on cutting-edge AI tools, machine learning techniques, and effective prompt engineering strategies.",
-    images: [
-      "https://via.placeholder.com/600x400/4CAF50/FFFFFF?text=ML+Symposium+Slide1",
-      "https://via.placeholder.com/600x400/2E7D32/FFFFFF?text=ML+Symposium+Slide2",
-      "https://via.placeholder.com/600x400/1B5E20/FFFFFF?text=ML+Symposium+Slide3",
-    ],
+    time: "9:00 AM - 5:00 PM",
+    location: "GHRCEM Pune",
+    description:
+      "National-level coding event with online quizzes and offline coding rounds.",
+      images: [
+        "../assets/events/codevista1.png",
+        "../assets/events/codevista2.png",
+        "../assets/events/codevista3.png",
+      ],
   },
 ];
 
 const EventsSection = () => {
   const [[currentIndex, direction], setCurrentIndex] = useState([0, 0]);
   const [autoPlay, setAutoPlay] = useState(true);
-  const [selectedEvent, setSelectedEvent] = useState(null); // modal state
+
+  if (!pastEvents || pastEvents.length === 0) {
+    return <div className="text-white text-center py-12">No events available</div>;
+  }
 
   // Auto-advance slides
   useEffect(() => {
     if (!autoPlay) return;
 
     const interval = setInterval(() => {
-      setCurrentIndex([(currentIndex + 1) % events.length, 1]);
+      setCurrentIndex([(currentIndex + 1) % pastEvents.length, 1]);
     }, 5000);
 
     return () => clearInterval(interval);
   }, [currentIndex, autoPlay]);
 
   const nextSlide = () => {
-    setCurrentIndex([(currentIndex + 1) % events.length, 1]);
+    setCurrentIndex([(currentIndex + 1) % pastEvents.length, 1]);
   };
 
   const prevSlide = () => {
-    setCurrentIndex([(currentIndex - 1 + events.length) % events.length, -1]);
+    setCurrentIndex([(currentIndex - 1 + pastEvents.length) % pastEvents.length, -1]);
   };
 
   const goToSlide = (index) => {
@@ -102,18 +84,7 @@ const EventsSection = () => {
 
   return (
     <section className="relative py-24 px-4 overflow-hidden bg-gray-900 text-white">
-      {/* Gradient Background */}
-      <div
-        className="absolute inset-0 -z-10"
-        style={{
-          background:
-            "linear-gradient(270deg, #0b0e17, #1a1f2c, #24243e, #1a1f2c, #0b0e17)",
-          backgroundSize: "400% 400%",
-        }}
-      ></div>
-
       <div className="max-w-6xl mx-auto relative z-10">
-        {/* Heading */}
         <motion.h2
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -122,13 +93,11 @@ const EventsSection = () => {
           className="mb-12 text-4xl md:text-5xl font-extrabold tracking-wide text-center"
         >
           <span className="bg-gradient-to-r from-pink-400 via-orange-400 to-purple-500 bg-clip-text text-transparent">
-            Our Recent Events
+            Our Flagship Events
           </span>
         </motion.h2>
 
-        {/* Slideshow Container */}
         <div className="relative max-w-5xl mx-auto">
-          {/* Slide Container */}
           <div className="overflow-hidden rounded-2xl shadow-2xl h-[500px]">
             <AnimatePresence custom={direction}>
               <motion.div
@@ -144,11 +113,10 @@ const EventsSection = () => {
                 }}
                 className="relative h-full"
               >
-                {/* Current Slide */}
                 <div className="absolute inset-0 bg-gray-800/50 backdrop-blur-md rounded-2xl overflow-hidden">
                   <img
-                    src={events[currentIndex].image}
-                    alt={events[currentIndex].title}
+                    src={pastEvents[currentIndex].images[0]}
+                    alt={pastEvents[currentIndex].title}
                     className="w-full h-full object-cover"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-gray-900/90 to-transparent p-8 flex flex-col justify-end">
@@ -158,26 +126,30 @@ const EventsSection = () => {
                       transition={{ delay: 0.2 }}
                       className="text-3xl font-bold mb-4 text-white"
                     >
-                      {events[currentIndex].title}
+                      {pastEvents[currentIndex].title}
                     </motion.h3>
                     <div className="grid grid-cols-2 gap-4 mb-6 text-gray-300">
                       <div className="flex items-center gap-2">
                         <FiCalendar className="text-pink-400" />
-                        <span>{events[currentIndex].date}</span>
+                        <span>{pastEvents[currentIndex].date}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <FiClock className="text-orange-400" />
+                        <span>{pastEvents[currentIndex].time}</span>
                       </div>
                       <div className="flex items-center gap-2 col-span-2">
                         <FiMapPin className="text-purple-400" />
-                        <span>{events[currentIndex].location}</span>
+                        <span>{pastEvents[currentIndex].location}</span>
                       </div>
                     </div>
-                    <motion.button
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                      onClick={() => setSelectedEvent(events[currentIndex])}
-                      className="px-6 py-3 text-sm font-medium rounded-full bg-gradient-to-r from-pink-500 to-orange-500 text-white w-fit"
+                    <motion.p
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.3 }}
+                      className="text-gray-300 mb-6 max-w-md"
                     >
-                      View Details
-                    </motion.button>
+                      {pastEvents[currentIndex].description}
+                    </motion.p>
                   </div>
                 </div>
               </motion.div>
@@ -202,7 +174,7 @@ const EventsSection = () => {
 
           {/* Slide Indicators */}
           <div className="flex justify-center gap-2 mt-4">
-            {events.map((_, index) => (
+            {pastEvents.map((_, index) => (
               <button
                 key={index}
                 onClick={() => goToSlide(index)}
@@ -224,113 +196,6 @@ const EventsSection = () => {
           </div>
         </div>
       </div>
-
-      {/* ================= MODAL ================= */}
-      <AnimatePresence>
-        {selectedEvent && (
-          <motion.div
-            className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-          >
-            <motion.div
-              className="bg-gray-900 text-white rounded-2xl shadow-2xl max-w-2xl w-full p-6 relative"
-              initial={{ y: 100, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              exit={{ y: 100, opacity: 0 }}
-              transition={{ type: "spring", stiffness: 120 }}
-            >
-              {/* Close Button */}
-              <button
-                onClick={() => setSelectedEvent(null)}
-                className="absolute top-3 right-3 text-gray-400 hover:text-white text-xl"
-              >
-                ✖
-              </button>
-
-              {/* Title */}
-              <h3 className="text-2xl font-bold mb-2">{selectedEvent.title}</h3>
-              <p className="text-sm text-gray-400 mb-4">{selectedEvent.date}</p>
-
-              {/* Full Info based on ID */}
-              {selectedEvent.id === 1 && (
-                <>
-                  <p className="mb-4">
-                    The Department of AI & AIML, in association with the AI & Coding
-                    Club (AICC) and Society for Data Science (S4DS), organized CodeVista
-                    5.0, a national-level coding competition with two rounds – an online
-                    technical quiz and an offline coding round.
-                  </p>
-                  <p className="mb-4">
-                    The event saw <b>674 registrations</b>, including participants from
-                    reputed institutes such as AIT, VIIT, PICT, IIT Madras, and IIT
-                    Patna. From these, <b>100 finalists</b> competed in the offline round
-                    at GHRCEM, Pune. A panel discussion by industry experts further
-                    enriched the event.
-                  </p>
-                  <h4 className="font-semibold text-lg mb-2">
-                    🏆 Winners & Cash Prizes:
-                  </h4>
-                  <ul className="list-disc list-inside mb-4">
-                    <li>Rishi Kumar Singh – 1st Prize</li>
-                    <li>Roshan Gupta – 2nd Prize</li>
-                    <li>Sumit Choudhary – 3rd Prize</li>
-                  </ul>
-                  <p>
-                    CodeVista 5.0 successfully provided a platform for young coders to
-                    showcase their skills while fostering innovation and
-                    entrepreneurship.
-                  </p>
-                </>
-              )}
-
-              {selectedEvent.id === 2 && (
-                <>
-                  <p className="mb-4">
-                    The Department of AI & AIML, in association with the AI & Coding
-                    Club (AICC), organized a two-day{" "}
-                    <b>Python Workshop on 29th & 30th August 2024</b>.
-                  </p>
-                  <p className="mb-4">
-                    This hands-on workshop provided a practical platform for aspiring
-                    programmers to dive into the world of Python. Participants explored
-                    everything from <b>fundamentals</b> to <b>building functional
-                    projects</b>, guided by expert mentors.
-                  </p>
-                  <p>
-                    The event witnessed enthusiastic participation, with students gaining
-                    <b> real-world coding experience</b> and improving their confidence in
-                    problem-solving using Python.
-                  </p>
-                </>
-              )}
-
-              {selectedEvent.id === 3 && (
-                <>
-                  <p className="mb-4">
-                    The Department of AI & AIML, in association with the AI & Coding
-                    Club (AICC), organized the{" "}
-                    <b>C Code Craft: C Challenge Competition</b> on{" "}
-                    <b>27th July 2024</b>.
-                  </p>
-                  <p className="mb-4">The competition was conducted in two rounds:</p>
-                  <ul className="list-disc list-inside mb-4">
-                    <li>✅ Round 1: Quiz on C programming fundamentals</li>
-                    <li>✅ Round 2: Coding challenge based on problem statements</li>
-                  </ul>
-                  <p>
-                    The event witnessed participation from <b>100+ students</b>, who
-                    showcased excellent coding and problem-solving abilities. Winners
-                    were awarded prizes & certificates, while all participants gained
-                    <b> valuable hands-on experience</b> in C programming.
-                  </p>
-                </>
-              )}
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </section>
   );
 };

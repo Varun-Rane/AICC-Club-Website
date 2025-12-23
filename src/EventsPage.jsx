@@ -7,14 +7,9 @@ import {
   VerticalTimelineElement,
 } from "react-vertical-timeline-component";
 import "react-vertical-timeline-component/style.min.css";
-import { createClient } from "@supabase/supabase-js";
+import { supabase } from "./supabaseClient";
 
-// --- Supabase Client ---
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-const supabase = createClient(supabaseUrl, supabaseKey);
-
-// --- Registration Modal ---
+/* ================= Registration Modal ================= */
 const RegistrationModal = ({ event, onClose, onRegister }) => {
   const [formData, setFormData] = useState({
     name: "",
@@ -37,17 +32,18 @@ const RegistrationModal = ({ event, onClose, onRegister }) => {
       .toUpperCase()}`;
     setTicketId(id);
     setIsRegistered(true);
-    onRegister({ ...formData, event, ticketId: id });
+    onRegister?.({ ...formData, event, ticketId: id });
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-4 z-50">
+    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
       <div className="bg-gray-900 rounded-xl p-6 max-w-md w-full">
         {!isRegistered ? (
           <>
             <h2 className="text-2xl font-bold text-white mb-4">
               Register for {event.event_name}
             </h2>
+
             <form onSubmit={handleSubmit} className="space-y-4">
               {[
                 "name",
@@ -60,40 +56,41 @@ const RegistrationModal = ({ event, onClose, onRegister }) => {
               ].map((field) => (
                 <input
                   key={field}
-                  type="text"
+                  required
                   placeholder={field}
                   value={formData[field]}
                   onChange={(e) =>
                     setFormData({ ...formData, [field]: e.target.value })
                   }
                   className="w-full p-2 rounded-lg bg-gray-800 text-white"
-                  required
                 />
               ))}
+
               <select
+                required
                 value={formData.gender}
                 onChange={(e) =>
                   setFormData({ ...formData, gender: e.target.value })
                 }
                 className="w-full p-2 rounded-lg bg-gray-800 text-white"
-                required
               >
                 <option value="">Select Gender</option>
-                <option value="Male">Male</option>
-                <option value="Female">Female</option>
-                <option value="Other">Other</option>
+                <option>Male</option>
+                <option>Female</option>
+                <option>Other</option>
               </select>
-              <div className="flex justify-end space-x-2">
+
+              <div className="flex justify-end gap-2">
                 <button
                   type="button"
                   onClick={onClose}
-                  className="bg-gray-700 text-white px-4 py-2 rounded-lg"
+                  className="bg-gray-700 px-4 py-2 rounded-lg"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="bg-gradient-to-r from-pink-500 to-orange-500 text-white px-4 py-2 rounded-lg"
+                  className="bg-gradient-to-r from-pink-500 to-orange-500 px-4 py-2 rounded-lg"
                 >
                   Submit
                 </button>
@@ -105,16 +102,13 @@ const RegistrationModal = ({ event, onClose, onRegister }) => {
             <h2 className="text-2xl font-bold text-white mb-4">
               Registration Successful!
             </h2>
-            <p className="text-gray-300 mb-4">
-              Your ticket ID:{" "}
-              <span className="font-bold text-pink-400">{ticketId}</span>
+            <p className="text-gray-300">
+              Ticket ID:{" "}
+              <span className="text-pink-400 font-semibold">{ticketId}</span>
             </p>
-            <div className="bg-white p-4 rounded-lg mb-4">
-              <QRCode value={JSON.stringify({ ...formData, event, ticketId })} />
-            </div>
             <button
               onClick={onClose}
-              className="bg-gradient-to-r from-pink-500 to-orange-500 text-white px-4 py-2 rounded-lg w-full"
+              className="mt-6 w-full bg-gradient-to-r from-pink-500 to-orange-500 px-4 py-2 rounded-lg"
             >
               Close
             </button>
@@ -125,149 +119,146 @@ const RegistrationModal = ({ event, onClose, onRegister }) => {
   );
 };
 
-// --- Event Card with Slideshow ---
+/* ================= Past Event Card (FIXED SIZE) ================= */
 const EventCard = ({ title, date, description, images }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
 
-  const nextSlide = () =>
-    setCurrentIndex((prev) => (prev + 1) % images.length);
-
   useEffect(() => {
-    if (images && images.length > 1) {
-      const interval = setInterval(nextSlide, 3000);
+    if (images.length > 1) {
+      const interval = setInterval(
+        () => setCurrentIndex((i) => (i + 1) % images.length),
+        3000
+      );
       return () => clearInterval(interval);
     }
   }, [images]);
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true }}
-      transition={{ duration: 0.6 }}
-      className="bg-gray-800 rounded-xl p-6 shadow-lg overflow-hidden"
+      whileHover={{ scale: 1.03 }}
+      className="
+        bg-gray-800 rounded-xl shadow-lg overflow-hidden
+        w-full max-w-md mx-auto
+        h-[420px] flex flex-col
+      "
     >
-      {images && images.length > 0 && (
-        <div className="relative mb-4">
-          <img
-            src={images[currentIndex]}
-            alt={`${title} - ${currentIndex}`}
-            className="w-full h-64 md:h-80 object-cover rounded-xl transition-all duration-500"
-          />
-          {images.length > 1 && (
-            <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex space-x-2">
-              {images.map((_, idx) => (
-                <button
-                  key={idx}
-                  onClick={() => setCurrentIndex(idx)}
-                  className={`w-3 h-3 rounded-full ${
-                    currentIndex === idx ? "bg-white" : "bg-gray-500"
-                  }`}
-                />
-              ))}
-            </div>
-          )}
-        </div>
-      )}
+      {/* IMAGE SLIDESHOW */}
+      <div className="relative w-full aspect-[16/9] overflow-hidden">
+        <img
+          src={images[currentIndex]}
+          alt={title}
+          className="w-full h-full object-cover transition-all duration-500"
+        />
 
-      <h3 className="text-xl font-bold text-white mb-2">{title}</h3>
-      <p className="text-pink-400 mb-4">{date}</p>
-      <p className="text-gray-300 mb-4">{description}</p>
+        {/* DOTS */}
+        <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-2">
+          {images.map((_, idx) => (
+            <span
+              key={idx}
+              onClick={() => setCurrentIndex(idx)}
+              className={`w-2.5 h-2.5 rounded-full cursor-pointer ${
+                idx === currentIndex ? "bg-white" : "bg-gray-400"
+              }`}
+            />
+          ))}
+        </div>
+      </div>
+
+      {/* CONTENT */}
+      <div className="flex-1 p-4 flex flex-col">
+        <h3 className="text-lg font-bold text-white">{title}</h3>
+        <p className="text-pink-400 text-sm mt-1">{date}</p>
+        <p className="text-gray-300 text-sm mt-3 line-clamp-3">
+          {description}
+        </p>
+      </div>
     </motion.div>
   );
 };
 
-// --- Events Page ---
+/* ================= Events Page ================= */
 const EventsPage = () => {
   const [selectedEvent, setSelectedEvent] = useState(null);
-  const [registrations, setRegistrations] = useState([]);
-  const [futureEvents, setFutureEvents] = useState([]);
-  const [pastEvents, setPastEvents] = useState([]);
+  const [upcomingEvents, setUpcomingEvents] = useState([]);
 
+  /* 🔥 Upcoming Events from Supabase */
   useEffect(() => {
-    const fetchEvents = async () => {
-      const { data, error } = await supabase
+    const fetchUpcomingEvents = async () => {
+      const { data } = await supabase
         .from("events")
         .select("*")
+        .eq("registration_open", true)
         .order("date", { ascending: true });
 
-      if (error) {
-        console.error("Error fetching events:", error);
-        return;
-      }
-
-      const now = new Date();
-      const upcoming = data.filter(
-        (event) => event.date && new Date(event.date) >= now
-      );
-      const past = data.filter(
-        (event) => event.date && new Date(event.date) < now
-      );
-
-      setFutureEvents(upcoming);
-      setPastEvents(past);
+      if (data) setUpcomingEvents(data);
     };
 
-    fetchEvents();
+    fetchUpcomingEvents();
   }, []);
 
-  const handleRegister = (event) => setSelectedEvent(event);
-  const handleCloseModal = () => setSelectedEvent(null);
-  const handleRegistrationSubmit = (registrationData) => {
-    const updated = [...registrations, registrationData];
-    setRegistrations(updated);
-    localStorage.setItem("registrations", JSON.stringify(updated));
-  };
+  /* ✅ PAST EVENTS (4 cards with slideshow) */
+  const pastEvents = [
+    {
+      title: "AI chatbot competition",
+      date: "19 Sept 2025",
+      description:
+        "A 24-hour hackathon where participants built AI chatbots to solve real-world problems.",
+      images: [
+        "../assets/events/chatbot1.png",
+        "../assets/events/chatbot2.png",
+        "../assets/events/chatbot3.png",
+      ],
+    },
+    {
+      title: "CodeVista 5.0",
+      date: "25-28 Feb 2025",
+      description:
+        "A national-level coding event with online quiz and offline coding rounds.",
+      images: [
+        "../assets/events/codevista1.png",
+        "../assets/events/codevista2.png",
+        "../assets/events/codevista3.png",
+      ],
+    },
+    {
+      title: "Gen AI workshop",
+      date: "01 Feb 2025",
+      description:
+        "Hands-on bootcamp focused on data science, analytics and GenAI tools.",
+      images: [
+        "../assets/events/genAI1.png",
+        "../assets/events/genAI2.png",
+        "../assets/events/genAI3.png",
+      ],
+    },
+    {
+      title: "AI tools & prompt engineering",
+      date: "23 Aug 2025",
+      description:
+        "Interactive session on AI tools, prompt engineering and best practices.",
+      images: [
+        "../assets/events/prompt1.png",
+        "../assets/events/prompt2.png",
+        "../assets/events/prompt3.png",
+      ],
+    },
+  ];
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white pt-24 pb-8 px-4">
-      <section className="max-w-6xl mx-auto text-center py-12">
-        <motion.h1
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-          className="text-4xl md:text-5xl font-bold mb-6 bg-gradient-to-r from-white to-pink-400 bg-clip-text text-transparent"
-        >
-          Events
-        </motion.h1>
-        <motion.p
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.2 }}
-          className="max-w-3xl mx-auto text-lg text-gray-300"
-        >
-          Explore our past and upcoming events.
-        </motion.p>
-      </section>
-
+    <div className="bg-gray-900 text-white pt-24 px-4 pb-24">
       {/* Upcoming Events */}
       <section className="max-w-6xl mx-auto my-16">
-        <motion.h2
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.6 }}
-          className="text-3xl font-bold text-center mb-12 bg-gradient-to-r from-white to-pink-400 bg-clip-text text-transparent"
-        >
+        <h2 className="text-3xl font-bold text-center mb-12">
           Upcoming Events
-        </motion.h2>
+        </h2>
+
         <VerticalTimeline>
-          {futureEvents.map((event) => (
+          {upcomingEvents.map((event) => (
             <VerticalTimelineElement
               key={event.id}
-              contentStyle={{ background: "#1e293b", color: "#fff" }}
-              contentArrowStyle={{ borderRight: "7px solid #1e293b" }}
               date={new Date(event.date).toDateString()}
-              iconStyle={{ background: "#ec4899", color: "#fff" }}
-              icon={
-                event.poster_url ? (
-                  <img
-                    src={event.poster_url}
-                    alt={event.event_name}
-                    className="w-full h-full object-cover rounded-full"
-                  />
-                ) : null
-              }
+              contentStyle={{ background: "#1e293b", color: "#fff" }}
+              iconStyle={{ background: "#ec4899" }}
             >
               {event.poster_url && (
                 <img
@@ -277,16 +268,13 @@ const EventsPage = () => {
                 />
               )}
               <h3 className="text-xl font-bold">{event.event_name}</h3>
-              <p className="text-gray-300 my-2">{event.description}</p>
-
-              {event.registration_open && (
-                <button
-                  onClick={() => handleRegister(event)}
-                  className="bg-gradient-to-r from-pink-500 to-orange-500 text-white px-4 py-2 rounded-lg mt-4"
-                >
-                  Register
-                </button>
-              )}
+              <p className="text-gray-300">{event.description}</p>
+              <button
+                onClick={() => setSelectedEvent(event)}
+                className="mt-4 bg-gradient-to-r from-pink-500 to-orange-500 px-4 py-2 rounded-lg"
+              >
+                Register
+              </button>
             </VerticalTimelineElement>
           ))}
         </VerticalTimeline>
@@ -294,34 +282,21 @@ const EventsPage = () => {
 
       {/* Past Events */}
       <section className="max-w-6xl mx-auto my-16">
-        <motion.h2
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.6 }}
-          className="text-3xl font-bold text-center mb-12 bg-gradient-to-r from-white to-pink-400 bg-clip-text text-transparent"
-        >
+        <h2 className="text-3xl font-bold text-center mb-12">
           Past Events
-        </motion.h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          {pastEvents.map((event) => (
-            <EventCard
-              key={event.id}
-              title={event.event_name}
-              date={new Date(event.date).toDateString()}
-              description={event.description}
-              images={event.poster_url ? [event.poster_url] : []}
-            />
+        </h2>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-10">
+          {pastEvents.map((event, index) => (
+            <EventCard key={index} {...event} />
           ))}
         </div>
       </section>
 
-      {/* Registration Modal */}
       {selectedEvent && (
         <RegistrationModal
           event={selectedEvent}
-          onClose={handleCloseModal}
-          onRegister={handleRegistrationSubmit}
+          onClose={() => setSelectedEvent(null)}
         />
       )}
     </div>

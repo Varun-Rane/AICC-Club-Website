@@ -99,7 +99,7 @@ const AboutPage = () => {
           transition={{ duration: 0.6 }}
           className="text-3xl font-bold text-center mb-12 bg-gradient-to-r from-white to-pink-400 bg-clip-text text-transparent"
         >
-          Meet Our Team
+          Meet Our Faculty Team
         </motion.h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           <TeamMemberCard
