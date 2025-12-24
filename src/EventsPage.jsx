@@ -1,7 +1,6 @@
 /* eslint-disable no-unused-vars */
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import QRCode from "react-qr-code";
 import {
   VerticalTimeline,
   VerticalTimelineElement,
@@ -21,24 +20,30 @@ const RegistrationModal = ({ event, onClose, onRegister }) => {
     department: "",
     gender: "",
   });
-  const [isRegistered, setIsRegistered] = useState(false);
+
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [ticketId, setTicketId] = useState("");
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    const id = `TICKET-${Math.random()
-      .toString(36)
-      .substr(2, 9)
-      .toUpperCase()}`;
+    setIsSubmitting(true);
+
+    const id = crypto.randomUUID();
     setTicketId(id);
-    setIsRegistered(true);
-    onRegister?.({ ...formData, event, ticketId: id });
+
+    await onRegister({
+      ...formData,
+      event,
+      ticketId: id,
+    });
+
+    setIsSubmitting(false);
   };
 
   return (
     <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
       <div className="bg-gray-900 rounded-xl p-6 max-w-md w-full">
-        {!isRegistered ? (
+        {!ticketId ? (
           <>
             <h2 className="text-2xl font-bold text-white mb-4">
               Register for {event.event_name}
@@ -90,9 +95,10 @@ const RegistrationModal = ({ event, onClose, onRegister }) => {
                 </button>
                 <button
                   type="submit"
+                  disabled={isSubmitting}
                   className="bg-gradient-to-r from-pink-500 to-orange-500 px-4 py-2 rounded-lg"
                 >
-                  Submit
+                  {isSubmitting ? "Submitting..." : "Submit"}
                 </button>
               </div>
             </form>
@@ -100,11 +106,13 @@ const RegistrationModal = ({ event, onClose, onRegister }) => {
         ) : (
           <>
             <h2 className="text-2xl font-bold text-white mb-4">
-              Registration Successful!
+              Registration Successful 🎉
             </h2>
             <p className="text-gray-300">
               Ticket ID:{" "}
-              <span className="text-pink-400 font-semibold">{ticketId}</span>
+              <span className="text-pink-400 font-semibold">
+                {ticketId}
+              </span>
             </p>
             <button
               onClick={onClose}
@@ -119,130 +127,65 @@ const RegistrationModal = ({ event, onClose, onRegister }) => {
   );
 };
 
-/* ================= Past Event Card (FIXED SIZE) ================= */
-const EventCard = ({ title, date, description, images }) => {
-  const [currentIndex, setCurrentIndex] = useState(0);
-
-  useEffect(() => {
-    if (images.length > 1) {
-      const interval = setInterval(
-        () => setCurrentIndex((i) => (i + 1) % images.length),
-        3000
-      );
-      return () => clearInterval(interval);
-    }
-  }, [images]);
-
-  return (
-    <motion.div
-      whileHover={{ scale: 1.03 }}
-      className="
-        bg-gray-800 rounded-xl shadow-lg overflow-hidden
-        w-full max-w-md mx-auto
-        h-[420px] flex flex-col
-      "
-    >
-      {/* IMAGE SLIDESHOW */}
-      <div className="relative w-full aspect-[16/9] overflow-hidden">
-        <img
-          src={images[currentIndex]}
-          alt={title}
-          className="w-full h-full object-cover transition-all duration-500"
-        />
-
-        {/* DOTS */}
-        <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-2">
-          {images.map((_, idx) => (
-            <span
-              key={idx}
-              onClick={() => setCurrentIndex(idx)}
-              className={`w-2.5 h-2.5 rounded-full cursor-pointer ${
-                idx === currentIndex ? "bg-white" : "bg-gray-400"
-              }`}
-            />
-          ))}
-        </div>
-      </div>
-
-      {/* CONTENT */}
-      <div className="flex-1 p-4 flex flex-col">
-        <h3 className="text-lg font-bold text-white">{title}</h3>
-        <p className="text-pink-400 text-sm mt-1">{date}</p>
-        <p className="text-gray-300 text-sm mt-3 line-clamp-3">
-          {description}
-        </p>
-      </div>
-    </motion.div>
-  );
-};
-
 /* ================= Events Page ================= */
 const EventsPage = () => {
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [upcomingEvents, setUpcomingEvents] = useState([]);
 
-  /* 🔥 Upcoming Events from Supabase */
+  /* 🔥 Fetch Upcoming Events */
   useEffect(() => {
     const fetchUpcomingEvents = async () => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("events")
         .select("*")
         .eq("registration_open", true)
         .order("date", { ascending: true });
 
-      if (data) setUpcomingEvents(data);
+      if (!error) setUpcomingEvents(data || []);
+      else console.error(error);
     };
 
     fetchUpcomingEvents();
   }, []);
 
-  /* ✅ PAST EVENTS (4 cards with slideshow) */
-  const pastEvents = [
-    {
-      title: "AI chatbot competition",
-      date: "19 Sept 2025",
-      description:
-        "A 24-hour hackathon where participants built AI chatbots to solve real-world problems.",
-      images: [
-        "../assets/events/chatbot1.png",
-        "../assets/events/chatbot2.png",
-        "../assets/events/chatbot3.png",
-      ],
-    },
-    {
-      title: "CodeVista 5.0",
-      date: "25-28 Feb 2025",
-      description:
-        "A national-level coding event with online quiz and offline coding rounds.",
-      images: [
-        "../assets/events/codevista1.png",
-        "../assets/events/codevista2.png",
-        "../assets/events/codevista3.png",
-      ],
-    },
-    {
-      title: "Gen AI workshop",
-      date: "01 Feb 2025",
-      description:
-        "Hands-on bootcamp focused on data science, analytics and GenAI tools.",
-      images: [
-        "../assets/events/genAI1.png",
-        "../assets/events/genAI2.png",
-        "../assets/events/genAI3.png",
-      ],
-    },
-    {
-      title: "AI tools & prompt engineering",
-      date: "23 Aug 2025",
-      description:
-        "Interactive session on AI tools, prompt engineering and best practices.",
-      images: [
-        "../assets/events/prompt1.png",
-        "../assets/events/prompt2.png",
-        "../assets/events/prompt3.png",
-      ],
-    },
-  ];
+  /* ✅ REGISTER EVENT (THIS WAS MISSING BEFORE) */
+  const handleRegister = async ({
+    event,
+    ticketId,
+    name,
+    email,
+    phoneNo,
+    branch,
+    studyingYear,
+    department,
+  }) => {
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+
+    if (!user || authError) {
+      alert("Please login first");
+      return;
+    }
+
+    const { error } = await supabase.from("registrations").insert({
+      user_id: user.id,
+      event_id: event.id,
+      name,
+      email,
+      phone: phoneNo,
+      branch,
+      studying_year: studyingYear,
+      department,
+      ticket_id: ticketId,
+    });
+
+    if (error) {
+      console.error("Insert error:", error);
+      alert("Registration failed");
+    }
+  };
 
   return (
     <div className="bg-gray-900 text-white pt-24 px-4 pb-24">
@@ -267,8 +210,10 @@ const EventsPage = () => {
                   className="w-full h-40 object-cover rounded-lg mb-4"
                 />
               )}
+
               <h3 className="text-xl font-bold">{event.event_name}</h3>
               <p className="text-gray-300">{event.description}</p>
+
               <button
                 onClick={() => setSelectedEvent(event)}
                 className="mt-4 bg-gradient-to-r from-pink-500 to-orange-500 px-4 py-2 rounded-lg"
@@ -280,23 +225,11 @@ const EventsPage = () => {
         </VerticalTimeline>
       </section>
 
-      {/* Past Events */}
-      <section className="max-w-6xl mx-auto my-16">
-        <h2 className="text-3xl font-bold text-center mb-12">
-          Past Events
-        </h2>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-10">
-          {pastEvents.map((event, index) => (
-            <EventCard key={index} {...event} />
-          ))}
-        </div>
-      </section>
-
       {selectedEvent && (
         <RegistrationModal
           event={selectedEvent}
           onClose={() => setSelectedEvent(null)}
+          onRegister={handleRegister}
         />
       )}
     </div>
