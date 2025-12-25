@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "../src/supabaseClient"; // ✅ ensure correct path
+import { supabase } from "../src/supabaseClient";
 
 const AuthPage = ({ setUser }) => {
   const [name, setName] = useState("");
@@ -8,9 +8,13 @@ const AuthPage = ({ setUser }) => {
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+
   const [isLogin, setIsLogin] = useState(true);
+  const [showPassword, setShowPassword] = useState(false);
+
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const navigate = useNavigate();
 
@@ -18,78 +22,65 @@ const AuthPage = ({ setUser }) => {
     e.preventDefault();
     setError("");
     setSuccess("");
+    setLoading(true);
 
     try {
       if (isLogin) {
-        // 🔹 LOGIN
+        // LOGIN
         const { data, error } = await supabase.auth.signInWithPassword({
           email: email.trim().toLowerCase(),
           password: password.trim(),
         });
-      
         if (error) throw error;
+
         const user = data.user;
-      
-        // 🔹 Fetch full profile for role-based routing
+
         const { data: profile, error: profileError } = await supabase
           .from("profiles")
           .select("id, email, name, college, phone, role")
           .eq("id", user.id)
           .maybeSingle();
-      
+
         if (profileError) throw profileError;
-      
-        // 🔹 Merge auth user + profile into one object
-        const fullUser = {
-          ...user,
-          ...profile, // includes role, name, college, phone, email
-        };
-      
+
+        const fullUser = { ...user, ...profile };
         setUser(fullUser);
-      
-        // ✅ Role-based navigation
-        if (fullUser.role === "admin") {
-          navigate("/admin-dashboard");
-        } else {
-          navigate("/user-dashboard");
-        }
-      }
-       else {
-        // 🔹 SIGN UP
+
+        fullUser.role === "admin"
+          ? navigate("/admin-dashboard")
+          : navigate("/user-dashboard");
+      } else {
+        // SIGNUP
         const { data, error } = await supabase.auth.signUp({
           email: email.trim().toLowerCase(),
           password: password.trim(),
         });
-
         if (error) throw error;
 
         if (data.user) {
-          // Insert into profiles table
-          const { error: profileError } = await supabase.from("profiles").insert([
-            {
-              id: data.user.id,
-              email: data.user.email,
-              name,
-              college,
-              phone,
-              role: "user", // default role
-            },
-          ]);
+          const { error: profileError } = await supabase
+            .from("profiles")
+            .insert([
+              {
+                id: data.user.id,
+                email: data.user.email,
+                name,
+                college,
+                phone,
+                role: "user",
+              },
+            ]);
 
           if (profileError) throw profileError;
         }
 
-        setSuccess("✅ Signup successful! Please check your email to confirm.");
-        setName("");
-        setCollege("");
-        setPhone("");
-        setEmail("");
-        setPassword("");
-
+        setSuccess("✅ Signup successful! Please verify your email.");
         setTimeout(() => setIsLogin(true), 2500);
       }
     } catch (err) {
-      setError(err.message || "Something went wrong.");
+      setError(err.message || "Something went wrong");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -101,13 +92,13 @@ const AuthPage = ({ setUser }) => {
         </h2>
 
         {error && (
-          <div className="bg-red-900/30 border border-red-500 text-red-300 px-4 py-2 rounded-lg mb-4 text-center">
+          <div className="bg-red-900/30 border border-red-500 text-red-300 px-4 py-2 rounded mb-4 text-center">
             {error}
           </div>
         )}
 
         {success && (
-          <div className="bg-green-900/30 border border-green-500 text-green-300 px-4 py-2 rounded-lg mb-4 text-center">
+          <div className="bg-green-900/30 border border-green-500 text-green-300 px-4 py-2 rounded mb-4 text-center">
             {success}
           </div>
         )}
@@ -115,68 +106,80 @@ const AuthPage = ({ setUser }) => {
         <form onSubmit={handleSubmit} className="space-y-4">
           {!isLogin && (
             <>
-              <div>
-                <label className="block text-sm mb-1">Name</label>
-                <input
-                  type="text"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className="w-full px-4 py-2 bg-gray-700 rounded-lg"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm mb-1">College</label>
-                <input
-                  type="text"
-                  value={college}
-                  onChange={(e) => setCollege(e.target.value)}
-                  className="w-full px-4 py-2 bg-gray-700 rounded-lg"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm mb-1">Phone</label>
-                <input
-                  type="tel"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  className="w-full px-4 py-2 bg-gray-700 rounded-lg"
-                  required
-                />
-              </div>
+              <input
+                type="text"
+                placeholder="Name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="w-full px-4 py-2 bg-gray-700 rounded"
+                required
+              />
+              <input
+                type="text"
+                placeholder="College"
+                value={college}
+                onChange={(e) => setCollege(e.target.value)}
+                className="w-full px-4 py-2 bg-gray-700 rounded"
+                required
+              />
+              <input
+                type="tel"
+                placeholder="Phone"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                className="w-full px-4 py-2 bg-gray-700 rounded"
+                required
+              />
             </>
           )}
 
-          <div>
-            <label className="block text-sm mb-1">Email</label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-4 py-2 bg-gray-700 rounded-lg"
-              required
-            />
-          </div>
+          <input
+            type="email"
+            placeholder="Email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className="w-full px-4 py-2 bg-gray-700 rounded"
+            required
+          />
 
-          <div>
-            <label className="block text-sm mb-1">Password</label>
+          {/* PASSWORD WITH TOGGLE */}
+          <div className="relative">
             <input
-              type="password"
+              type={showPassword ? "text" : "password"}
+              placeholder="Password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-4 py-2 bg-gray-700 rounded-lg"
+              className="w-full px-4 py-2 bg-gray-700 rounded pr-12"
               required
             />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-3 top-2.5 text-sm text-pink-400"
+            >
+              {showPassword ? "Hide" : "Show"}
+            </button>
           </div>
 
+          {/* SUBMIT BUTTON */}
           <button
             type="submit"
-            className="w-full px-4 py-2 bg-gradient-to-r from-pink-500 to-orange-500 text-white rounded-lg hover:scale-105 transition-transform"
+            disabled={loading}
+            className={`w-full py-2 rounded-lg font-semibold transition-all
+              ${
+                loading
+                  ? "bg-gray-600 cursor-not-allowed"
+                  : "bg-gradient-to-r from-pink-500 to-orange-500 hover:scale-105"
+              }`}
           >
-            {isLogin ? "Login" : "Sign Up"}
+            {loading ? (
+              <span className="flex items-center justify-center gap-2">
+                <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                Processing...
+              </span>
+            ) : (
+              isLogin ? "Login" : "Sign Up"
+            )}
           </button>
         </form>
 
@@ -184,13 +187,12 @@ const AuthPage = ({ setUser }) => {
           <p className="text-gray-400">
             {isLogin ? "Don't have an account? " : "Already have an account? "}
             <button
-              type="button"
               onClick={() => {
                 setIsLogin(!isLogin);
                 setError("");
                 setSuccess("");
               }}
-              className="text-pink-400 hover:underline font-medium"
+              className="text-pink-400 hover:underline"
             >
               {isLogin ? "Sign Up" : "Login"}
             </button>

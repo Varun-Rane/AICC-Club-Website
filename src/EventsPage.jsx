@@ -8,7 +8,47 @@ import {
 import "react-vertical-timeline-component/style.min.css";
 import { supabase } from "./supabaseClient";
 
-/* ================= Registration Modal ================= */
+/* ================= PAST EVENT CARD (ASPECT RATIO FIXED) ================= */
+const EventCard = ({ title, date, description, images }) => {
+  const [currentIndex, setCurrentIndex] = useState(0);
+
+  useEffect(() => {
+    if (images.length > 1) {
+      const interval = setInterval(() => {
+        setCurrentIndex((prev) => (prev + 1) % images.length);
+      }, 3000);
+      return () => clearInterval(interval);
+    }
+  }, [images]);
+
+  return (
+    <motion.div
+      whileHover={{ scale: 1.03 }}
+      className="bg-gray-800 rounded-xl shadow-lg overflow-hidden
+                 w-full max-w-md mx-auto flex flex-col"
+    >
+      {/* IMAGE */}
+      <div className="relative w-full aspect-[16/9] overflow-hidden">
+        <img
+          src={images[currentIndex]}
+          alt={title}
+          className="w-full h-full object-cover transition-all duration-500"
+        />
+      </div>
+
+      {/* CONTENT */}
+      <div className="p-4 flex flex-col flex-1">
+        <h3 className="text-lg font-bold text-white">{title}</h3>
+        <p className="text-pink-400 text-sm mt-1">{date}</p>
+        <p className="text-gray-300 text-sm mt-3 line-clamp-3">
+          {description}
+        </p>
+      </div>
+    </motion.div>
+  );
+};
+
+/* ================= REGISTRATION MODAL ================= */
 const RegistrationModal = ({ event, onClose, onRegister }) => {
   const [formData, setFormData] = useState({
     name: "",
@@ -31,12 +71,7 @@ const RegistrationModal = ({ event, onClose, onRegister }) => {
     const id = crypto.randomUUID();
     setTicketId(id);
 
-    await onRegister({
-      ...formData,
-      event,
-      ticketId: id,
-    });
-
+    await onRegister({ ...formData, event, ticketId: id });
     setIsSubmitting(false);
   };
 
@@ -110,9 +145,7 @@ const RegistrationModal = ({ event, onClose, onRegister }) => {
             </h2>
             <p className="text-gray-300">
               Ticket ID:{" "}
-              <span className="text-pink-400 font-semibold">
-                {ticketId}
-              </span>
+              <span className="text-pink-400 font-semibold">{ticketId}</span>
             </p>
             <button
               onClick={onClose}
@@ -127,12 +160,12 @@ const RegistrationModal = ({ event, onClose, onRegister }) => {
   );
 };
 
-/* ================= Events Page ================= */
+/* ================= EVENTS PAGE ================= */
 const EventsPage = () => {
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [upcomingEvents, setUpcomingEvents] = useState([]);
 
-  /* 🔥 Fetch Upcoming Events */
+  /* FETCH UPCOMING EVENTS */
   useEffect(() => {
     const fetchUpcomingEvents = async () => {
       const { data, error } = await supabase
@@ -142,13 +175,12 @@ const EventsPage = () => {
         .order("date", { ascending: true });
 
       if (!error) setUpcomingEvents(data || []);
-      else console.error(error);
     };
 
     fetchUpcomingEvents();
   }, []);
 
-  /* ✅ REGISTER EVENT (THIS WAS MISSING BEFORE) */
+  /* REGISTER EVENT */
   const handleRegister = async ({
     event,
     ticketId,
@@ -159,15 +191,8 @@ const EventsPage = () => {
     studyingYear,
     department,
   }) => {
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-
-    if (!user || authError) {
-      alert("Please login first");
-      return;
-    }
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return alert("Please login first");
 
     const { error } = await supabase.from("registrations").insert({
       user_id: user.id,
@@ -181,15 +206,60 @@ const EventsPage = () => {
       ticket_id: ticketId,
     });
 
-    if (error) {
-      console.error("Insert error:", error);
-      alert("Registration failed");
-    }
+    if (error) alert("Registration failed");
   };
+
+  /* ORIGINAL 4 PAST EVENTS */
+  const pastEvents = [
+    {
+      title: "AI Chatbot Competition",
+      date: "19 Sept 2024",
+      description:
+        "A 24-hour hackathon where participants built AI chatbots to solve real-world problems.",
+      images: [
+        "/assets/events/chatbot1.png",
+        "/assets/events/chatbot2.png",
+        "/assets/events/chatbot3.png",
+      ],
+    },
+    {
+      title: "CodeVista 5.0",
+      date: "25–28 Feb 2024",
+      description:
+        "National-level coding competition with quiz and offline coding rounds.",
+      images: [
+        "/assets/events/codevista1.png",
+        "/assets/events/codevista2.png",
+        "/assets/events/codevista3.png",
+      ],
+    },
+    {
+      title: "Gen AI Workshop",
+      date: "01 Feb 2024",
+      description:
+        "Hands-on workshop focused on Generative AI tools and real-world use cases.",
+      images: [
+        "/assets/events/genAI1.png",
+        "/assets/events/genAI2.png",
+        "/assets/events/genAI3.png",
+      ],
+    },
+    {
+      title: "AI Tools & Prompt Engineering",
+      date: "23 Aug 2024",
+      description:
+        "Interactive session on modern AI tools and prompt engineering techniques.",
+      images: [
+        "/assets/events/prompt1.png",
+        "/assets/events/prompt2.png",
+        "/assets/events/prompt3.png",
+      ],
+    },
+  ];
 
   return (
     <div className="bg-gray-900 text-white pt-24 px-4 pb-24">
-      {/* Upcoming Events */}
+      {/* UPCOMING EVENTS */}
       <section className="max-w-6xl mx-auto my-16">
         <h2 className="text-3xl font-bold text-center mb-12">
           Upcoming Events
@@ -223,6 +293,26 @@ const EventsPage = () => {
             </VerticalTimelineElement>
           ))}
         </VerticalTimeline>
+      </section>
+
+      {/* PAST EVENTS */}
+      <section className="max-w-6xl mx-auto my-16 px-4">
+        <motion.h2
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6 }}
+          className="text-3xl font-bold text-center mb-12
+            bg-gradient-to-r from-white to-pink-400 bg-clip-text text-transparent"
+        >
+          Past Events
+        </motion.h2>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-10">
+          {pastEvents.map((event, index) => (
+            <EventCard key={index} {...event} />
+          ))}
+        </div>
       </section>
 
       {selectedEvent && (

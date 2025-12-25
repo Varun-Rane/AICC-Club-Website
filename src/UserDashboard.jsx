@@ -11,6 +11,7 @@ import {
   FiBook,
   FiAward,
   FiX,
+  FiTrash2,
 } from "react-icons/fi";
 import html2canvas from "html2canvas";
 import { createClient } from "@supabase/supabase-js";
@@ -61,6 +62,37 @@ const UserDashboard = ({ user }) => {
 
     fetchRegistrations();
   }, []);
+
+  // ================= EVENT DATE CHECK (NEW) =================
+  const isEventOver = (eventDate) => {
+    const today = new Date();
+    const eventDay = new Date(eventDate);
+
+    today.setHours(0, 0, 0, 0);
+    eventDay.setHours(0, 0, 0, 0);
+
+    return eventDay < today;
+  };
+
+  // ================= DELETE TICKET (NEW) =================
+  const deleteTicket = async (registrationId) => {
+    const ok = window.confirm("Event is over. Delete this ticket?");
+    if (!ok) return;
+
+    const { error } = await supabase
+      .from("registrations")
+      .delete()
+      .eq("id", registrationId);
+
+    if (error) {
+      console.error(error);
+      alert("Failed to delete ticket");
+    } else {
+      setRegistrations((prev) =>
+        prev.filter((r) => r.id !== registrationId)
+      );
+    }
+  };
 
   // ================= TICKET HANDLING =================
   const downloadTicket = (ticket) => {
@@ -133,35 +165,53 @@ const UserDashboard = ({ user }) => {
           </div>
         ) : registrations.length > 0 ? (
           <div className="space-y-6">
-            {registrations.map((reg, index) => (
-              <motion.div
-                key={reg.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.05 }}
-                className="bg-gray-800/50 rounded-xl p-6 border border-gray-700"
-              >
-                <div className="flex flex-col md:flex-row justify-between gap-4">
-                  <div>
-                    <h3 className="text-2xl font-bold">
-                      {reg.event.event_name}
-                    </h3>
-                    <p className="text-gray-400">{reg.event.date}</p>
-                    <p className="text-gray-300 mt-2">
-                      {reg.event.description}
-                    </p>
-                  </div>
+            {registrations.map((reg, index) => {
+              const eventCompleted = isEventOver(reg.event.date);
 
-                  <button
-                    onClick={() => downloadTicket(reg)}
-                    className="px-4 py-2 bg-gradient-to-r from-pink-500 to-orange-500 rounded-lg hover:scale-105 transition"
-                  >
-                    <FiDownload className="inline mr-2" />
-                    Download Ticket
-                  </button>
-                </div>
-              </motion.div>
-            ))}
+              return (
+                <motion.div
+                  key={reg.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.05 }}
+                  className="bg-gray-800/50 rounded-xl p-6 border border-gray-700"
+                >
+                  <div className="flex flex-col md:flex-row justify-between gap-4">
+                    <div>
+                      <h3 className="text-2xl font-bold">
+                        {reg.event.event_name}
+                      </h3>
+                      <p className="text-gray-400">{reg.event.date}</p>
+                      <p className="text-gray-300 mt-2">
+                        {reg.event.description}
+                      </p>
+                    </div>
+
+                    <div className="flex flex-col gap-2">
+                      {!eventCompleted && (
+                        <button
+                          onClick={() => downloadTicket(reg)}
+                          className="px-4 py-2 bg-gradient-to-r from-pink-500 to-orange-500 rounded-lg hover:scale-105 transition"
+                        >
+                          <FiDownload className="inline mr-2" />
+                          Download Ticket
+                        </button>
+                      )}
+
+                      {eventCompleted && (
+                        <button
+                          onClick={() => deleteTicket(reg.id)}
+                          className="px-4 py-2 text-red-400 hover:text-red-500 flex items-center gap-2"
+                        >
+                          <FiTrash2 />
+                          Delete Ticket
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </motion.div>
+              );
+            })}
           </div>
         ) : (
           <div className="bg-gray-800/50 rounded-xl p-8 text-center border border-gray-700">
