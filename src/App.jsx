@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
-import { supabase } from "./supabaseClient"; // your supabase client
+import { supabase } from "./supabaseClient";
 
+// ===== Components =====
 import Navigation from "./Navigation";
 import Home from "./Home";
 import AboutPage from "./AboutPage";
@@ -10,15 +11,15 @@ import Footer from "./Footer";
 import AuthPage from "./AuthPage";
 import TeamPage from "./TeamPage";
 import UserDashboard from "./UserDashboard";
-import AdminDashboard from "./AdminDashboard";
-import AdminEventsPage from "./AdminEventsPage";
+import AdminDashboard from "./AdminDashboard";     // 📊 Analytics page
+import AdminEventsPage from "./AdminEventsPage";   // 🎯 Event management
 
 const App = () => {
-  const [user, setUser] = useState(null); // supabase user
-  const [profile, setProfile] = useState(null); // profile from DB
+  const [user, setUser] = useState(null);       // auth user
+  const [profile, setProfile] = useState(null); // profile table
   const [loading, setLoading] = useState(true);
 
-  // Fetch logged-in user + profile
+  // ================= FETCH USER + PROFILE =================
   useEffect(() => {
     const getUser = async () => {
       const {
@@ -32,7 +33,6 @@ const App = () => {
 
       setUser(user);
 
-      // fetch profile from "profiles" table
       const { data: profileData, error } = await supabase
         .from("profiles")
         .select("*")
@@ -40,7 +40,7 @@ const App = () => {
         .single();
 
       if (error) {
-        console.error("Error fetching profile:", error);
+        console.error("Profile fetch error:", error);
       } else {
         setProfile(profileData);
       }
@@ -50,41 +50,43 @@ const App = () => {
 
     getUser();
 
-    // subscribe to auth state changes
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session?.user) {
-        setUser(session.user);
-        supabase
-          .from("profiles")
-          .select("*")
-          .eq("id", session.user.id)
-          .single()
-          .then(({ data }) => setProfile(data));
-      } else {
-        setUser(null);
-        setProfile(null);
+    // 🔄 Auth state listener
+    const { data: listener } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        if (session?.user) {
+          setUser(session.user);
+          supabase
+            .from("profiles")
+            .select("*")
+            .eq("id", session.user.id)
+            .single()
+            .then(({ data }) => setProfile(data));
+        } else {
+          setUser(null);
+          setProfile(null);
+        }
       }
-    });
+    );
 
     return () => {
       listener.subscription.unsubscribe();
     };
   }, []);
 
+  // ================= LOGOUT =================
   const handleLogout = async () => {
     await supabase.auth.signOut();
     setUser(null);
     setProfile(null);
   };
 
-  // Protect routes for logged-in users
+  // ================= ROUTE GUARDS =================
   const ProtectedRoute = ({ children }) => {
     if (loading) return <div className="text-white text-center p-8">Loading...</div>;
     if (!user) return <Navigate to="/auth" replace />;
     return children;
   };
 
-  // Protect routes for admin users only
   const AdminRoute = ({ children }) => {
     if (loading) return <div className="text-white text-center p-8">Loading...</div>;
     if (profile?.role !== "admin") return <Navigate to="/" replace />;
@@ -93,20 +95,30 @@ const App = () => {
 
   return (
     <Router>
-      <Navigation user={profile} onLogout={handleLogout} isAdmin={profile?.role === "admin"} />
+      <Navigation
+        user={profile}
+        onLogout={handleLogout}
+        isAdmin={profile?.role === "admin"}
+      />
+
       <Routes>
-        {/* Authentication */}
+        {/* ================= AUTH ================= */}
         <Route path="/auth" element={<AuthPage setUser={setUser} />} />
 
-        {/* User routes */}
+        {/* ================= USER ROUTES ================= */}
         <Route
           path="/"
           element={
             <ProtectedRoute>
-              {profile?.role === "admin" ? <Navigate to="/admin/events" replace /> : <Home />}
+              {profile?.role === "admin" ? (
+                <Navigate to="/admin/dashboard" replace />
+              ) : (
+                <Home />
+              )}
             </ProtectedRoute>
           }
         />
+
         <Route
           path="/about"
           element={
@@ -115,14 +127,20 @@ const App = () => {
             </ProtectedRoute>
           }
         />
+
         <Route
           path="/events"
           element={
             <ProtectedRoute>
-              {profile?.role === "admin" ? <Navigate to="/admin/events" replace /> : <EventsPage />}
+              {profile?.role === "admin" ? (
+                <Navigate to="/admin/events" replace />
+              ) : (
+                <EventsPage />
+              )}
             </ProtectedRoute>
           }
         />
+
         <Route
           path="/teams"
           element={
@@ -131,6 +149,7 @@ const App = () => {
             </ProtectedRoute>
           }
         />
+
         <Route
           path="/user-dashboard"
           element={
@@ -140,27 +159,29 @@ const App = () => {
           }
         />
 
-        {/* Admin routes */}
+        {/* ================= ADMIN ROUTES ================= */}
         <Route
           path="/admin/dashboard"
           element={
             <AdminRoute>
-              <AdminDashboard />
-            </AdminRoute>
-          }
-        />
-        <Route
-          path="/admin/events"
-          element={
-            <AdminRoute>
-              <AdminEventsPage />
+              <AdminDashboard /> {/* 📊 Google-Form style analytics */}
             </AdminRoute>
           }
         />
 
-        {/* Fallback */}
+        <Route
+          path="/admin/events"
+          element={
+            <AdminRoute>
+              <AdminEventsPage /> {/* 🎯 Event CRUD */}
+            </AdminRoute>
+          }
+        />
+
+        {/* ================= FALLBACK ================= */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
+
       <Footer />
     </Router>
   );
