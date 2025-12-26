@@ -8,7 +8,22 @@ import {
 import "react-vertical-timeline-component/style.min.css";
 import { supabase } from "./supabaseClient";
 
-/* ================= PAST EVENT CARD (ASPECT RATIO FIXED) ================= */
+/* ================= LOADER ================= */
+const EventsLoader = () => {
+  return (
+    <div className="flex flex-col items-center justify-center py-24">
+      <div className="relative">
+        <div className="w-16 h-16 border-4 border-pink-500/30 rounded-full"></div>
+        <div className="w-16 h-16 border-4 border-pink-500 border-t-transparent rounded-full absolute top-0 left-0 animate-spin"></div>
+      </div>
+      <p className="mt-6 text-gray-400 text-sm tracking-wide">
+        Loading upcoming events...
+      </p>
+    </div>
+  );
+};
+
+/* ================= PAST EVENT CARD ================= */
 const EventCard = ({ title, date, description, images }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
 
@@ -27,7 +42,6 @@ const EventCard = ({ title, date, description, images }) => {
       className="bg-gray-800 rounded-xl shadow-lg overflow-hidden
                  w-full max-w-md mx-auto flex flex-col"
     >
-      {/* IMAGE */}
       <div className="relative w-full aspect-[16/9] overflow-hidden">
         <img
           src={images[currentIndex]}
@@ -36,7 +50,6 @@ const EventCard = ({ title, date, description, images }) => {
         />
       </div>
 
-      {/* CONTENT */}
       <div className="p-4 flex flex-col flex-1">
         <h3 className="text-lg font-bold text-white">{title}</h3>
         <p className="text-pink-400 text-sm mt-1">{date}</p>
@@ -164,23 +177,29 @@ const RegistrationModal = ({ event, onClose, onRegister }) => {
 const EventsPage = () => {
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [upcomingEvents, setUpcomingEvents] = useState([]);
+  const [loadingEvents, setLoadingEvents] = useState(true);
 
-  /* FETCH UPCOMING EVENTS */
+  /* ===== FETCH UPCOMING EVENTS ===== */
   useEffect(() => {
     const fetchUpcomingEvents = async () => {
+      setLoadingEvents(true);
+      const today = new Date().toISOString();
+
       const { data, error } = await supabase
         .from("events")
         .select("*")
         .eq("registration_open", true)
+        .gte("date", today)
         .order("date", { ascending: true });
 
       if (!error) setUpcomingEvents(data || []);
+      setLoadingEvents(false);
     };
 
     fetchUpcomingEvents();
   }, []);
 
-  /* REGISTER EVENT */
+  /* ===== REGISTER (ONE USER ONE EVENT) ===== */
   const handleRegister = async ({
     event,
     ticketId,
@@ -190,11 +209,24 @@ const EventsPage = () => {
     branch,
     studyingYear,
     department,
+    gender,
   }) => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return alert("Please login first");
 
-    const { error } = await supabase.from("registrations").insert({
+    const { data: already } = await supabase
+      .from("registrations")
+      .select("id")
+      .eq("user_id", user.id)
+      .eq("event_id", event.id)
+      .maybeSingle();
+
+    if (already) {
+      alert("You have already registered for this event ❌");
+      return;
+    }
+
+    await supabase.from("registrations").insert({
       user_id: user.id,
       event_id: event.id,
       name,
@@ -203,96 +235,88 @@ const EventsPage = () => {
       branch,
       studying_year: studyingYear,
       department,
+      gender,
       ticket_id: ticketId,
     });
-
-    if (error) alert("Registration failed");
   };
 
-  /* ORIGINAL 4 PAST EVENTS */
+  /* ===== STATIC PAST EVENTS ===== */
   const pastEvents = [
     {
       title: "AI Chatbot Competition",
       date: "19 Sept 2024",
       description:
-        "A 24-hour hackathon where participants built AI chatbots to solve real-world problems.",
-      images: [
-        "/assets/events/chatbot1.png",
-        "/assets/events/chatbot2.png",
-        "/assets/events/chatbot3.png",
-      ],
+        "A 24-hour hackathon where participants built AI chatbots.",
+      images: ["/assets/events/chatbot1.png", "/assets/events/chatbot2.png"],
     },
     {
       title: "CodeVista 5.0",
       date: "25–28 Feb 2024",
       description:
-        "National-level coding competition with quiz and offline coding rounds.",
-      images: [
-        "/assets/events/codevista1.png",
-        "/assets/events/codevista2.png",
-        "/assets/events/codevista3.png",
-      ],
+        "National-level coding competition with multiple rounds.",
+      images: ["/assets/events/codevista1.png", "/assets/events/codevista2.png"],
     },
     {
       title: "Gen AI Workshop",
       date: "01 Feb 2024",
       description:
-        "Hands-on workshop focused on Generative AI tools and real-world use cases.",
-      images: [
-        "/assets/events/genAI1.png",
-        "/assets/events/genAI2.png",
-        "/assets/events/genAI3.png",
-      ],
+        "Hands-on workshop focused on Generative AI tools.",
+      images: ["/assets/events/genAI1.png", "/assets/events/genAI2.png"],
     },
     {
       title: "AI Tools & Prompt Engineering",
       date: "23 Aug 2024",
       description:
-        "Interactive session on modern AI tools and prompt engineering techniques.",
-      images: [
-        "/assets/events/prompt1.png",
-        "/assets/events/prompt2.png",
-        "/assets/events/prompt3.png",
-      ],
+        "Interactive session on modern AI tools.",
+      images: ["/assets/events/prompt1.png", "/assets/events/prompt2.png"],
     },
   ];
 
   return (
     <div className="bg-gray-900 text-white pt-24 px-4 pb-24">
+
       {/* UPCOMING EVENTS */}
       <section className="max-w-6xl mx-auto my-16">
         <h2 className="text-3xl font-bold text-center mb-12">
           Upcoming Events
         </h2>
 
-        <VerticalTimeline>
-          {upcomingEvents.map((event) => (
-            <VerticalTimelineElement
-              key={event.id}
-              date={new Date(event.date).toDateString()}
-              contentStyle={{ background: "#1e293b", color: "#fff" }}
-              iconStyle={{ background: "#ec4899" }}
-            >
-              {event.poster_url && (
-                <img
-                  src={event.poster_url}
-                  alt={event.event_name}
-                  className="w-full h-40 object-cover rounded-lg mb-4"
-                />
-              )}
-
-              <h3 className="text-xl font-bold">{event.event_name}</h3>
-              <p className="text-gray-300">{event.description}</p>
-
-              <button
-                onClick={() => setSelectedEvent(event)}
-                className="mt-4 bg-gradient-to-r from-pink-500 to-orange-500 px-4 py-2 rounded-lg"
+        {loadingEvents ? (
+          <EventsLoader />
+        ) : upcomingEvents.length === 0 ? (
+          <p className="text-center text-gray-400">
+            No upcoming events available
+          </p>
+        ) : (
+          <VerticalTimeline>
+            {upcomingEvents.map((event) => (
+              <VerticalTimelineElement
+                key={event.id}
+                date={new Date(event.date).toDateString()}
+                contentStyle={{ background: "#1e293b", color: "#fff" }}
+                iconStyle={{ background: "#ec4899" }}
               >
-                Register
-              </button>
-            </VerticalTimelineElement>
-          ))}
-        </VerticalTimeline>
+                {event.poster_url && (
+                  <img
+                    src={event.poster_url}
+                    alt={event.event_name}
+                    className="w-full h-40 object-cover rounded-lg mb-4"
+                  />
+                )}
+
+                <h3 className="text-xl font-bold">{event.event_name}</h3>
+                <p className="text-gray-300">{event.description}</p>
+
+                <button
+                  onClick={() => setSelectedEvent(event)}
+                  className="mt-4 bg-gradient-to-r from-pink-500 to-orange-500 px-4 py-2 rounded-lg"
+                >
+                  Register
+                </button>
+              </VerticalTimelineElement>
+            ))}
+          </VerticalTimeline>
+        )}
       </section>
 
       {/* PAST EVENTS */}

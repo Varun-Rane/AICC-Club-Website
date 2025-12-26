@@ -1,4 +1,12 @@
 @import "tailwindcss";
+html,
+body,
+#root {
+  background-color: #020617; /* exact dashboard background */
+  min-height: 100%;
+  margin: 0;
+  padding: 0;
+}
 
 .perspective-1000 {
   perspective: 1000px;
