@@ -4,6 +4,16 @@ import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 import club from "../assets/aicc-logo-white.png";
 
+const NavItem = ({ to, children }) => (
+  <Link
+    to={to}
+    className="px-3 py-1 rounded-full border border-pink-500/40 text-pink-400
+               hover:bg-pink-500/10 transition text-sm"
+  >
+    {children}
+  </Link>
+);
+
 const Navigation = ({ user, isAdmin, onLogout }) => {
   return (
     <motion.div
@@ -12,7 +22,9 @@ const Navigation = ({ user, isAdmin, onLogout }) => {
       transition={{ type: "spring", stiffness: 120, damping: 12 }}
       className="fixed top-4 left-1/2 -translate-x-1/2 z-50"
     >
-      <div className="bg-gray-800/90 backdrop-blur-xl rounded-full border border-gray-700 px-5 py-2 shadow-xl flex items-center gap-6">
+      <div className="bg-gray-800/90 backdrop-blur-xl rounded-full
+                      border border-gray-700 px-6 py-2 shadow-xl
+                      flex items-center gap-6">
 
         {/* LOGO */}
         <Link
@@ -31,37 +43,25 @@ const Navigation = ({ user, isAdmin, onLogout }) => {
         </Link>
 
         {/* NAV LINKS */}
-        <nav className="flex items-center gap-4 text-sm">
+        <nav className="flex items-center gap-3">
 
-          {/* COMMON */}
-          <Link
-            to={isAdmin ? "/admin/dashboard" : "/"}
-            className="nav-link border border-pink-500/40 px-3 py-1 rounded-full text-pink-400 hover:bg-pink-500/10"
-          >
-            Home
-          </Link>
-
-          {/* USER LINKS */}
+          {/* USER NAVIGATION */}
           {!isAdmin && (
             <>
-              <Link to="/about" className="nav-link">About</Link>
-              <Link to="/events" className="nav-link">Events</Link>
-              <Link to="/teams" className="nav-link">Team</Link>
+              <NavItem to="/">Home</NavItem>
+              <NavItem to="/about">About</NavItem>
+              <NavItem to="/events">Events</NavItem>
+              <NavItem to="/teams">Team</NavItem>
+              <NavItem to="/user-dashboard">Dashboard</NavItem>
             </>
           )}
 
-          {/* ADMIN LINKS */}
+          {/* ADMIN NAVIGATION (UNCHANGED STYLE) */}
           {isAdmin && (
             <>
-              <Link to="/admin/dashboard" className="nav-link border border-pink-500/40 px-3 py-1 rounded-full text-pink-400 hover:bg-pink-500/10">
-                Dashboard
-              </Link>
-              <Link
-                to="/admin/events"
-                className="nav-link border border-pink-500/40 px-3 py-1 rounded-full text-pink-400 hover:bg-pink-500/10"
-              >
-                Manage Events
-              </Link>
+              <NavItem to="/admin/dashboard">Home</NavItem>
+              <NavItem to="/admin/dashboard">Dashboard</NavItem>
+              <NavItem to="/admin/events">Manage Events</NavItem>
             </>
           )}
 
@@ -69,14 +69,13 @@ const Navigation = ({ user, isAdmin, onLogout }) => {
           {user ? (
             <button
               onClick={onLogout}
-              className="nav-link text-red-400 hover:text-red-300"
+              className="px-3 py-1 rounded-full text-red-400
+                         hover:bg-red-500/10 transition text-sm"
             >
               Logout
             </button>
           ) : (
-            <Link to="/auth" className="nav-link">
-              Login
-            </Link>
+            <NavItem to="/auth">Login</NavItem>
           )}
         </nav>
       </div>
