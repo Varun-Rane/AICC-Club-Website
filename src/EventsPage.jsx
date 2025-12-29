@@ -75,38 +75,31 @@ const RegistrationModal = ({ event, onClose, onRegister }) => {
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [ticketId, setTicketId] = useState("");
+  const [done, setDone] = useState(false);
+  const [waitlisted, setWaitlisted] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
 
-    const id = crypto.randomUUID();
-    setTicketId(id);
+    const result = await onRegister({ ...formData, event });
 
-    await onRegister({ ...formData, event, ticketId: id });
+    setWaitlisted(result === "WAITLISTED");
+    setDone(true);
     setIsSubmitting(false);
   };
 
   return (
     <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
       <div className="bg-gray-900 rounded-xl p-6 max-w-md w-full">
-        {!ticketId ? (
+        {!done ? (
           <>
             <h2 className="text-2xl font-bold text-white mb-4">
               Register for {event.event_name}
             </h2>
 
             <form onSubmit={handleSubmit} className="space-y-4">
-              {[
-                "name",
-                "rollNo",
-                "phoneNo",
-                "email",
-                "branch",
-                "studyingYear",
-                "department",
-              ].map((field) => (
+              {["name", "rollNo", "phoneNo", "email", "branch"].map((field) => (
                 <input
                   key={field}
                   required
@@ -118,6 +111,38 @@ const RegistrationModal = ({ event, onClose, onRegister }) => {
                   className="w-full p-2 rounded-lg bg-gray-800 text-white"
                 />
               ))}
+
+              {/* ✅ STUDYING YEAR DROPDOWN */}
+              <select
+                required
+                value={formData.studyingYear}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    studyingYear: e.target.value,
+                  })
+                }
+                className="w-full p-2 rounded-lg bg-gray-800 text-white"
+              >
+                <option value="">Select Studying Year</option>
+                <option value="1st">1st Year</option>
+                <option value="2nd">2nd Year</option>
+                <option value="3rd">3rd Year</option>
+                <option value="4th">4th Year</option>
+              </select>
+
+              <input
+                required
+                placeholder="department"
+                value={formData.department}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    department: e.target.value,
+                  })
+                }
+                className="w-full p-2 rounded-lg bg-gray-800 text-white"
+              />
 
               <select
                 required
@@ -157,8 +182,9 @@ const RegistrationModal = ({ event, onClose, onRegister }) => {
               Registration Successful 🎉
             </h2>
             <p className="text-gray-300">
-              Ticket ID:{" "}
-              <span className="text-pink-400 font-semibold">{ticketId}</span>
+              {waitlisted
+                ? "You are on the waiting list. Ticket will be generated when seats are available."
+                : "Your ticket has been generated successfully."}
             </p>
             <button
               onClick={onClose}
@@ -179,30 +205,28 @@ const EventsPage = () => {
   const [upcomingEvents, setUpcomingEvents] = useState([]);
   const [loadingEvents, setLoadingEvents] = useState(true);
 
-  /* ===== FETCH UPCOMING EVENTS ===== */
   useEffect(() => {
     const fetchUpcomingEvents = async () => {
       setLoadingEvents(true);
       const today = new Date().toISOString();
 
-      const { data, error } = await supabase
+      const { data } = await supabase
         .from("events")
         .select("*")
         .eq("registration_open", true)
         .gte("date", today)
         .order("date", { ascending: true });
 
-      if (!error) setUpcomingEvents(data || []);
+      setUpcomingEvents(data || []);
       setLoadingEvents(false);
     };
 
     fetchUpcomingEvents();
   }, []);
 
-  /* ===== REGISTER (ONE USER ONE EVENT) ===== */
+  /* ===== REGISTER LOGIC ===== */
   const handleRegister = async ({
     event,
-    ticketId,
     name,
     email,
     phoneNo,
@@ -211,8 +235,14 @@ const EventsPage = () => {
     department,
     gender,
   }) => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return alert("Please login first");
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      alert("Please login first");
+      return;
+    }
 
     const { data: already } = await supabase
       .from("registrations")
@@ -226,6 +256,8 @@ const EventsPage = () => {
       return;
     }
 
+    const hasSeat = event.available_seats > 0;
+
     await supabase.from("registrations").insert({
       user_id: user.id,
       event_id: event.id,
@@ -236,11 +268,24 @@ const EventsPage = () => {
       studying_year: studyingYear,
       department,
       gender,
-      ticket_id: ticketId,
+      ticket_id: hasSeat ? crypto.randomUUID() : null,
+      is_waitlisted: !hasSeat,
+      status: hasSeat ? "CONFIRMED" : "WAITLISTED",
     });
+
+    if (hasSeat) {
+      await supabase
+        .from("events")
+        .update({
+          available_seats: event.available_seats - 1,
+        })
+        .eq("id", event.id);
+    }
+
+    return hasSeat ? "CONFIRMED" : "WAITLISTED";
   };
 
-  /* ===== STATIC PAST EVENTS ===== */
+  /* ===== STATIC PAST EVENTS (4 CARDS) ===== */
   const pastEvents = [
     {
       title: "AI Chatbot Competition",
@@ -274,7 +319,6 @@ const EventsPage = () => {
 
   return (
     <div className="bg-gray-900 text-white pt-24 px-4 pb-24">
-
       {/* UPCOMING EVENTS */}
       <section className="max-w-6xl mx-auto my-16">
         <h2 className="text-3xl font-bold text-center mb-12">
@@ -283,10 +327,6 @@ const EventsPage = () => {
 
         {loadingEvents ? (
           <EventsLoader />
-        ) : upcomingEvents.length === 0 ? (
-          <p className="text-center text-gray-400">
-            No upcoming events available
-          </p>
         ) : (
           <VerticalTimeline>
             {upcomingEvents.map((event) => (

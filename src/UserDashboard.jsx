@@ -22,26 +22,33 @@ const supabase = createClient(
   import.meta.env.VITE_SUPABASE_ANON_KEY
 );
 
-const UserDashboard = ({ user }) => {
+const UserDashboard = () => {
+  const [profile, setProfile] = useState(null);
   const [registrations, setRegistrations] = useState([]);
   const [selectedTicket, setSelectedTicket] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // ================= FETCH USER REGISTRATIONS =================
+  // ================= FETCH PROFILE + REGISTRATIONS =================
   useEffect(() => {
-    const fetchRegistrations = async () => {
+    const fetchData = async () => {
       const {
-        data: { user: authUser },
-        error: authError,
+        data: { user },
       } = await supabase.auth.getUser();
 
-      if (!authUser || authError) {
-        console.error("Auth error:", authError);
+      if (!user) {
         setIsLoading(false);
         return;
       }
 
-      const { data, error } = await supabase
+      const { data: profileData } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", user.id)
+        .single();
+
+      setProfile(profileData);
+
+      const { data: regs } = await supabase
         .from("registrations")
         .select(
           `
@@ -49,60 +56,39 @@ const UserDashboard = ({ user }) => {
           event:events(*)
         `
         )
-        .eq("user_id", authUser.id);
+        .eq("user_id", user.id);
 
-      if (error) {
-        console.error("Error fetching registrations:", error);
-      } else {
-        setRegistrations(data || []);
-      }
-
+      setRegistrations(regs || []);
       setIsLoading(false);
     };
 
-    fetchRegistrations();
+    fetchData();
   }, []);
 
-  // ================= EVENT DATE CHECK (NEW) =================
+  // ================= EVENT DATE CHECK =================
   const isEventOver = (eventDate) => {
     const today = new Date();
     const eventDay = new Date(eventDate);
-
     today.setHours(0, 0, 0, 0);
     eventDay.setHours(0, 0, 0, 0);
-
     return eventDay < today;
   };
 
-  // ================= DELETE TICKET (NEW) =================
+  // ================= DELETE TICKET =================
   const deleteTicket = async (registrationId) => {
-    const ok = window.confirm("Event is over. Delete this ticket?");
-    if (!ok) return;
+    if (!window.confirm("Event is over. Delete this ticket?")) return;
 
-    const { error } = await supabase
+    await supabase
       .from("registrations")
       .delete()
       .eq("id", registrationId);
 
-    if (error) {
-      console.error(error);
-      alert("Failed to delete ticket");
-    } else {
-      setRegistrations((prev) =>
-        prev.filter((r) => r.id !== registrationId)
-      );
-    }
+    setRegistrations((prev) =>
+      prev.filter((r) => r.id !== registrationId)
+    );
   };
 
-  // ================= TICKET HANDLING =================
-  const downloadTicket = (ticket) => {
-    setSelectedTicket(ticket);
-  };
-
-  const closeTicketPreview = () => {
-    setSelectedTicket(null);
-  };
-
+  // ================= DOWNLOAD =================
   const handleDownload = async () => {
     const ticketElement = document.getElementById("ticket-to-download");
     if (!ticketElement) return;
@@ -112,8 +98,25 @@ const UserDashboard = ({ user }) => {
     link.download = `AICC-Ticket-${selectedTicket.ticket_id}.png`;
     link.href = canvas.toDataURL("image/png");
     link.click();
-    closeTicketPreview();
+    setSelectedTicket(null);
   };
+
+  // ================= LOADING =================
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-900 text-white pt-28 p-8 text-center">
+        Loading dashboard...
+      </div>
+    );
+  }
+
+  if (!profile) {
+    return (
+      <div className="min-h-screen bg-gray-900 text-white pt-28 p-8 text-center">
+        Profile not found
+      </div>
+    );
+  }
 
   // ================= UI =================
   return (
@@ -131,22 +134,22 @@ const UserDashboard = ({ user }) => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-4">
-              <Info icon={<FiUser />} label="Name" value={user.name} />
-              <Info icon={<FiMail />} label="Email" value={user.email} />
-              <Info icon={<FiPhone />} label="Phone" value={user.phoneNo} />
+              <Info icon={<FiUser />} label="Name" value={profile.name} />
+              <Info icon={<FiMail />} label="Email" value={profile.email} />
+              <Info icon={<FiPhone />} label="Phone" value={profile.phone} />
             </div>
 
             <div className="space-y-4">
-              <Info icon={<FiBook />} label="Branch" value={user.branch} />
+              <Info icon={<FiBook />} label="Branch" value={profile.branch} />
               <Info
                 icon={<FiAward />}
                 label="Studying Year"
-                value={user.studyingYear}
+                value={profile.studying_year}
               />
               <Info
                 icon={<FiCalendar />}
                 label="Department"
-                value={user.department}
+                value={profile.department}
               />
             </div>
           </div>
@@ -159,14 +162,14 @@ const UserDashboard = ({ user }) => {
           Your Registered Events
         </h2>
 
-        {isLoading ? (
-          <div className="bg-gray-800/50 rounded-xl p-8 text-center border border-gray-700">
-            Loading your registrations...
-          </div>
-        ) : registrations.length > 0 ? (
+        {registrations.length > 0 ? (
           <div className="space-y-6">
             {registrations.map((reg, index) => {
               const eventCompleted = isEventOver(reg.event.date);
+
+              // 🔥 FINAL WAITLIST LOGIC
+              const waitlisted =
+                !reg.ticket_id || reg.event.available_seats <= 0;
 
               return (
                 <motion.div
@@ -176,38 +179,35 @@ const UserDashboard = ({ user }) => {
                   transition={{ delay: index * 0.05 }}
                   className="bg-gray-800/50 rounded-xl p-6 border border-gray-700"
                 >
-                  <div className="flex flex-col md:flex-row justify-between gap-4">
-                    <div>
-                      <h3 className="text-2xl font-bold">
-                        {reg.event.event_name}
-                      </h3>
-                      <p className="text-gray-400">{reg.event.date}</p>
-                      <p className="text-gray-300 mt-2">
-                        {reg.event.description}
+                  <h3 className="text-2xl font-bold">
+                    {reg.event.event_name}
+                  </h3>
+                  <p className="text-gray-400">{reg.event.date}</p>
+                  <p className="text-gray-300 mt-2">
+                    {reg.event.description}
+                  </p>
+
+                  <div className="mt-4">
+                    {waitlisted ? (
+                      <p className="text-yellow-400">
+                        ⏳ Waiting for seat confirmation
                       </p>
-                    </div>
-
-                    <div className="flex flex-col gap-2">
-                      {!eventCompleted && (
-                        <button
-                          onClick={() => downloadTicket(reg)}
-                          className="px-4 py-2 bg-gradient-to-r from-pink-500 to-orange-500 rounded-lg hover:scale-105 transition"
-                        >
-                          <FiDownload className="inline mr-2" />
-                          Download Ticket
-                        </button>
-                      )}
-
-                      {eventCompleted && (
-                        <button
-                          onClick={() => deleteTicket(reg.id)}
-                          className="px-4 py-2 text-red-400 hover:text-red-500 flex items-center gap-2"
-                        >
-                          <FiTrash2 />
-                          Delete Ticket
-                        </button>
-                      )}
-                    </div>
+                    ) : eventCompleted ? (
+                      <button
+                        onClick={() => deleteTicket(reg.id)}
+                        className="text-red-400 flex items-center gap-2"
+                      >
+                        <FiTrash2 /> Delete Ticket
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => setSelectedTicket(reg)}
+                        className="px-4 py-2 bg-gradient-to-r from-pink-500 to-orange-500 rounded-lg"
+                      >
+                        <FiDownload className="inline mr-2" />
+                        Download Ticket
+                      </button>
+                    )}
                   </div>
                 </motion.div>
               );
@@ -228,7 +228,7 @@ const UserDashboard = ({ user }) => {
             className="bg-white text-black rounded-xl p-8 w-full max-w-md relative"
           >
             <button
-              onClick={closeTicketPreview}
+              onClick={() => setSelectedTicket(null)}
               className="absolute top-4 right-4"
             >
               <FiX size={20} />
@@ -237,14 +237,13 @@ const UserDashboard = ({ user }) => {
             <h2 className="text-center text-2xl font-bold text-pink-600">
               AI Coding Club
             </h2>
-            <p className="text-center text-gray-600 mb-4">Event Ticket</p>
 
             <TicketRow
               label="Event"
               value={selectedTicket.event.event_name}
             />
             <TicketRow label="Date" value={selectedTicket.event.date} />
-            <TicketRow label="Name" value={selectedTicket.name} />
+            <TicketRow label="Name" value={profile.name} />
             <TicketRow
               label="Ticket ID"
               value={selectedTicket.ticket_id}
@@ -252,14 +251,9 @@ const UserDashboard = ({ user }) => {
             />
 
             <div className="flex justify-center my-4">
-              <QRCode
-                size={128}
-                value={JSON.stringify({
-                  ticketId: selectedTicket.ticket_id,
-                  name: selectedTicket.name,
-                  event: selectedTicket.event.event_name,
-                })}
-              />
+              {selectedTicket.ticket_id && (
+                <QRCode value={selectedTicket.ticket_id} size={128} />
+              )}
             </div>
 
             <button
@@ -282,7 +276,7 @@ const Info = ({ icon, label, value }) => (
     <div className="text-pink-400 text-xl">{icon}</div>
     <div>
       <p className="text-gray-400">{label}</p>
-      <p className="font-medium">{value}</p>
+      <p className="font-medium">{value ?? "-"}</p>
     </div>
   </div>
 );
