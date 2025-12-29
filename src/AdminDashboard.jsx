@@ -10,6 +10,8 @@ import {
 } from "recharts";
 import { FiDownload, FiTrash2, FiUser } from "react-icons/fi";
 import * as XLSX from "xlsx";
+import { useCurrentPng } from "recharts-to-png";
+import { saveAs } from "file-saver";
 import { supabase } from "./supabaseClient";
 
 /* ================= CONSTANTS ================= */
@@ -19,13 +21,11 @@ const COLORS = ["#3b82f6", "#ef4444", "#22c55e", "#f97316", "#a855f7"];
 const DashboardLoader = () => (
   <div className="min-h-screen bg-gray-900 p-10 pt-28 animate-pulse">
     <div className="h-10 w-64 bg-gray-700 rounded mb-10" />
-
     <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-10">
       {[1, 2, 3, 4].map((i) => (
         <div key={i} className="h-24 bg-gray-800 rounded-xl" />
       ))}
     </div>
-
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
       {[1, 2, 3, 4].map((i) => (
         <div key={i} className="h-80 bg-gray-800 rounded-xl" />
@@ -40,15 +40,14 @@ const AdminDashboard = () => {
   const [selectedEvent, setSelectedEvent] = useState("ALL");
   const [loading, setLoading] = useState(true);
 
-  /* ========== FETCH ========== */
+  /* ================= FETCH ================= */
   useEffect(() => {
     fetchRegistrations();
   }, []);
 
   const fetchRegistrations = async () => {
     setLoading(true);
-
-    const { data, error } = await supabase
+    const { data } = await supabase
       .from("registrations")
       .select(`
         id,
@@ -58,26 +57,24 @@ const AdminDashboard = () => {
         branch,
         studying_year,
         department,
+        gender,
         ticket_id,
-        event_id,
-        events!registrations_event_id_fkey (
+        events (
           event_name,
           date
         )
       `);
-
-    if (!error) setRegistrations(data || []);
+    setRegistrations(data || []);
     setLoading(false);
   };
 
-  /* ========== EVENTS LIST ========== */
+  /* ================= FILTER ================= */
   const eventList = useMemo(() => {
     const set = new Set();
     registrations.forEach((r) => r.events?.event_name && set.add(r.events.event_name));
     return ["ALL", ...Array.from(set)];
   }, [registrations]);
 
-  /* ========== FILTER ========== */
   const filtered = useMemo(() => {
     if (selectedEvent === "ALL") return registrations;
     return registrations.filter(
@@ -85,34 +82,35 @@ const AdminDashboard = () => {
     );
   }, [registrations, selectedEvent]);
 
-  /* ========== STATS ========== */
+  /* ================= STATS ================= */
   const stats = useMemo(() => {
     const byBranch = {};
     const byYear = {};
     const byDepartment = {};
-    const byGender = {}; // future ready
+    const byGender = {};
 
     filtered.forEach((r) => {
       if (r.branch) byBranch[r.branch] = (byBranch[r.branch] || 0) + 1;
-      if (r.studying_year) byYear[r.studying_year] = (byYear[r.studying_year] || 0) + 1;
-      if (r.department) byDepartment[r.department] = (byDepartment[r.department] || 0) + 1;
+      if (r.studying_year)
+        byYear[r.studying_year] = (byYear[r.studying_year] || 0) + 1;
+      if (r.department)
+        byDepartment[r.department] =
+          (byDepartment[r.department] || 0) + 1;
+      if (r.gender)
+        byGender[r.gender] = (byGender[r.gender] || 0) + 1;
     });
 
     return { byBranch, byYear, byDepartment, byGender };
   }, [filtered]);
 
-  /* ========== PIE SAFE DATA (IMPORTANT FIX) ========== */
   const makePieData = (obj) => {
-    const total = Object.values(obj).reduce((a, b) => a + b, 0);
     const entries = Object.entries(obj);
-
-    if (entries.length === 1) {
+    if (entries.length === 0) return [];
+    if (entries.length === 1)
       return [
         { name: entries[0][0], value: entries[0][1] },
-        { name: "", value: 0.0001 }, // invisible slice
+        { name: "", value: 0.0001 },
       ];
-    }
-
     return entries.map(([name, value]) => ({ name, value }));
   };
 
@@ -121,7 +119,7 @@ const AdminDashboard = () => {
   const departmentData = makePieData(stats.byDepartment);
   const genderData = makePieData(stats.byGender);
 
-  /* ========== EXPORT ========== */
+  /* ================= EXPORT EXCEL ================= */
   const exportExcel = () => {
     const sheet = XLSX.utils.json_to_sheet(
       filtered.map((r, i) => ({
@@ -132,6 +130,7 @@ const AdminDashboard = () => {
         Branch: r.branch,
         Year: r.studying_year,
         Department: r.department,
+        Gender: r.gender,
         Event: r.events?.event_name,
         Ticket: r.ticket_id,
       }))
@@ -142,12 +141,6 @@ const AdminDashboard = () => {
     XLSX.writeFile(wb, "AICC_Registrations.xlsx");
   };
 
-  /* ========== DELETE ========== */
-  const deleteRegistration = async (id) => {
-    await supabase.from("registrations").delete().eq("id", id);
-    setRegistrations((p) => p.filter((r) => r.id !== id));
-  };
-
   if (loading) return <DashboardLoader />;
 
   return (
@@ -155,7 +148,9 @@ const AdminDashboard = () => {
 
       {/* HEADER */}
       <div className="flex justify-between items-center mb-8">
-        <h1 className="text-4xl font-bold text-pink-400">Admin Dashboard</h1>
+        <h1 className="text-4xl font-bold text-pink-400">
+          Admin Dashboard
+        </h1>
         <button
           onClick={exportExcel}
           className="px-6 py-3 bg-gradient-to-r from-pink-500 to-orange-500 rounded-lg flex items-center gap-2"
@@ -178,105 +173,68 @@ const AdminDashboard = () => {
         </select>
       </div>
 
-      {/* SUMMARY */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-10">
-        <StatCard label="Total" value={filtered.length} />
-        <StatCard label="Branches" value={Object.keys(stats.byBranch).length} />
-        <StatCard label="Departments" value={Object.keys(stats.byDepartment).length} />
-        <StatCard label="Gender Types" value={Object.keys(stats.byGender).length} />
-      </div>
-
-      {/* PIE GRID */}
+      {/* PIE CHARTS GRID */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
         <PieCard title="Branch Distribution" data={branchData} />
         <PieCard title="Year Distribution" data={yearData} />
         <PieCard title="Department Distribution" data={departmentData} />
         <PieCard title="Gender Distribution" data={genderData} />
       </div>
-
-      {/* TABLE */}
-      <div className="bg-gray-800/50 rounded-xl border border-gray-700 overflow-x-auto">
-        <table className="min-w-full">
-          <thead className="bg-gray-700/50">
-            <tr>
-              <th className="px-4 py-3">Name</th>
-              <th>Email</th>
-              <th>Phone</th>
-              <th>Branch</th>
-              <th>Year</th>
-              <th>Department</th>
-              <th>Event</th>
-              <th>Ticket</th>
-              <th>Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.map((r) => (
-              <tr key={r.id} className="border-t border-gray-700">
-                <td className="px-4 py-2 flex gap-2">
-                  <FiUser /> {r.name}
-                </td>
-                <td>{r.email}</td>
-                <td>{r.phone}</td>
-                <td>{r.branch}</td>
-                <td>{r.studying_year}</td>
-                <td>{r.department}</td>
-                <td>{r.events?.event_name}</td>
-                <td className="text-pink-400">{r.ticket_id}</td>
-                <td>
-                  <button onClick={() => deleteRegistration(r.id)}>
-                    <FiTrash2 className="text-red-400" />
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
     </div>
   );
 };
 
-/* ================= COMPONENTS ================= */
+/* ================= PIE CARD (WITH DOWNLOAD) ================= */
 
-const StatCard = ({ label, value }) => (
-  <div className="bg-gray-800/50 p-6 rounded-xl border border-gray-700">
-    <p className="text-gray-400">{label}</p>
-    <p className="text-2xl font-bold text-pink-400">{value}</p>
-  </div>
-);
+const PieCard = ({ title, data }) => {
+  const [getPng, { ref }] = useCurrentPng();
 
-const PieCard = ({ title, data }) => (
-  <div className="bg-gray-800/50 p-6 rounded-xl border border-gray-700 h-80">
-    <h3 className="text-lg font-bold mb-2">{title}</h3>
+  const download = async () => {
+    const png = await getPng();
+    if (png) saveAs(png, `${title.replace(/\s/g, "_")}.png`);
+  };
 
-    {data.length === 0 ? (
-      <p className="text-gray-400">No data</p>
-    ) : (
-      <ResponsiveContainer width="100%" height="100%">
-        <PieChart>
-          <Pie
-            data={data}
-            dataKey="value"
-            nameKey="name"
-            cx="45%"
-            cy="50%"
-            outerRadius={90}
-            label={({ percent }) =>
-              percent > 0 ? `${(percent * 100).toFixed(1)}%` : ""
-            }
-          >
-            {data.map((_, i) => (
-              <Cell key={i} fill={COLORS[i % COLORS.length]} />
-            ))}
-          </Pie>
-          <Tooltip />
-          <Legend layout="vertical" align="right" verticalAlign="middle" />
-        </PieChart>
-      </ResponsiveContainer>
-    )}
-  </div>
-);
+  return (
+    <div className="bg-gray-800/50 p-6 rounded-xl border border-gray-700 h-80">
+      <div className="flex justify-between items-center mb-2">
+        <h3 className="text-lg font-bold">{title}</h3>
+        <button
+          onClick={download}
+          className="text-sm flex items-center gap-1 text-pink-400 hover:text-pink-300"
+        >
+          <FiDownload /> Download
+        </button>
+      </div>
+
+      {data.length === 0 ? (
+        <p className="text-gray-400">No data</p>
+      ) : (
+        <div ref={ref} className="w-full h-full">
+          <ResponsiveContainer width="100%" height="100%">
+            <PieChart>
+              <Pie
+                data={data}
+                dataKey="value"
+                nameKey="name"
+                cx="45%"
+                cy="50%"
+                outerRadius={90}
+                label={({ percent }) =>
+                  percent > 0 ? `${(percent * 100).toFixed(1)}%` : ""
+                }
+              >
+                {data.map((_, i) => (
+                  <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                ))}
+              </Pie>
+              <Tooltip />
+              <Legend layout="vertical" align="right" verticalAlign="middle" />
+            </PieChart>
+          </ResponsiveContainer>
+        </div>
+      )}
+    </div>
+  );
+};
 
 export default AdminDashboard;
