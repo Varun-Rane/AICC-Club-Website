@@ -18,6 +18,35 @@ const AuthPage = ({ setUser }) => {
 
   const navigate = useNavigate();
 
+  /* ================= GOOGLE LOGIN ================= */
+  const loginWithGoogle = async () => {
+    setError("");
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: window.location.origin,
+      },
+    });
+
+    if (error) setError(error.message);
+  };
+
+  /* ================= FORGOT PASSWORD ================= */
+  const forgotPassword = async () => {
+    if (!email) {
+      setError("Enter your email first");
+      return;
+    }
+
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/auth`,
+    });
+
+    if (error) setError(error.message);
+    else setSuccess("Password reset link sent to your email 📧");
+  };
+
+  /* ================= LOGIN / SIGNUP ================= */
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
@@ -47,7 +76,7 @@ const AuthPage = ({ setUser }) => {
         setUser(fullUser);
 
         fullUser.role === "admin"
-          ? navigate("/admin-dashboard")
+          ? navigate("/admin/dashboard")
           : navigate("/user-dashboard");
       } else {
         // SIGNUP
@@ -74,7 +103,7 @@ const AuthPage = ({ setUser }) => {
           if (profileError) throw profileError;
         }
 
-        setSuccess("✅ Signup successful! Please verify your email.");
+        setSuccess("✅ Signup successful! Verify your email.");
         setTimeout(() => setIsLogin(true), 2500);
       }
     } catch (err) {
@@ -142,7 +171,6 @@ const AuthPage = ({ setUser }) => {
             required
           />
 
-          {/* PASSWORD WITH TOGGLE */}
           <div className="relative">
             <input
               type={showPassword ? "text" : "password"}
@@ -161,7 +189,7 @@ const AuthPage = ({ setUser }) => {
             </button>
           </div>
 
-          {/* SUBMIT BUTTON */}
+          {/* SUBMIT */}
           <button
             type="submit"
             disabled={loading}
@@ -172,16 +200,27 @@ const AuthPage = ({ setUser }) => {
                   : "bg-gradient-to-r from-pink-500 to-orange-500 hover:scale-105"
               }`}
           >
-            {loading ? (
-              <span className="flex items-center justify-center gap-2">
-                <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-                Processing...
-              </span>
-            ) : (
-              isLogin ? "Login" : "Sign Up"
-            )}
+            {loading ? "Processing..." : isLogin ? "Login" : "Sign Up"}
           </button>
         </form>
+
+        {/* FORGOT PASSWORD */}
+        {isLogin && (
+          <button
+            onClick={forgotPassword}
+            className="mt-3 text-sm text-pink-400 hover:underline w-full text-center"
+          >
+            Forgot password?
+          </button>
+        )}
+
+        {/* GOOGLE LOGIN */}
+        <button
+          onClick={loginWithGoogle}
+          className="mt-4 w-full py-2 rounded-lg bg-white text-black font-semibold"
+        >
+          Continue with Google
+        </button>
 
         <div className="mt-6 text-center">
           <p className="text-gray-400">
