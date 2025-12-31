@@ -9,17 +9,17 @@ import AboutPage from "./AboutPage";
 import EventsPage from "./EventsPage";
 import Footer from "./Footer";
 import AuthPage from "./AuthPage";
+import ResetPassword from "./ResetPassword"; // ✅ ADDED
 import TeamPage from "./TeamPage";
 import UserDashboard from "./UserDashboard";
-import AdminDashboard from "./AdminDashboard";     // 📊 Analytics page
-import AdminEventsPage from "./AdminEventsPage";   // 🎯 Event management
+import AdminDashboard from "./AdminDashboard";
+import AdminEventsPage from "./AdminEventsPage";
 
 const App = () => {
-  const [user, setUser] = useState(null);       // auth user
-  const [profile, setProfile] = useState(null); // profile table
+  const [user, setUser] = useState(null);
+  const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // ================= FETCH USER + PROFILE =================
   useEffect(() => {
     const getUser = async () => {
       const {
@@ -33,24 +33,18 @@ const App = () => {
 
       setUser(user);
 
-      const { data: profileData, error } = await supabase
+      const { data: profileData } = await supabase
         .from("profiles")
         .select("*")
         .eq("id", user.id)
         .single();
 
-      if (error) {
-        console.error("Profile fetch error:", error);
-      } else {
-        setProfile(profileData);
-      }
-
+      setProfile(profileData);
       setLoading(false);
     };
 
     getUser();
 
-    // 🔄 Auth state listener
     const { data: listener } = supabase.auth.onAuthStateChange(
       (_event, session) => {
         if (session?.user) {
@@ -68,19 +62,15 @@ const App = () => {
       }
     );
 
-    return () => {
-      listener.subscription.unsubscribe();
-    };
+    return () => listener.subscription.unsubscribe();
   }, []);
 
-  // ================= LOGOUT =================
   const handleLogout = async () => {
     await supabase.auth.signOut();
     setUser(null);
     setProfile(null);
   };
 
-  // ================= ROUTE GUARDS =================
   const ProtectedRoute = ({ children }) => {
     if (loading) return <div className="text-white text-center p-8">Loading...</div>;
     if (!user) return <Navigate to="/auth" replace />;
@@ -104,6 +94,9 @@ const App = () => {
       <Routes>
         {/* ================= AUTH ================= */}
         <Route path="/auth" element={<AuthPage setUser={setUser} />} />
+
+        {/* 🔑 RESET PASSWORD (NO GUARD) */}
+        <Route path="/reset-password" element={<ResetPassword />} />
 
         {/* ================= USER ROUTES ================= */}
         <Route
@@ -164,7 +157,7 @@ const App = () => {
           path="/admin/dashboard"
           element={
             <AdminRoute>
-              <AdminDashboard /> {/* 📊 Google-Form style analytics */}
+              <AdminDashboard />
             </AdminRoute>
           }
         />
@@ -173,7 +166,7 @@ const App = () => {
           path="/admin/events"
           element={
             <AdminRoute>
-              <AdminEventsPage /> {/* 🎯 Event CRUD */}
+              <AdminEventsPage />
             </AdminRoute>
           }
         />

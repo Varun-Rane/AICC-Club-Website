@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "../src/supabaseClient";
+import { supabase } from "./supabaseClient";
 
 const AuthPage = ({ setUser }) => {
   const [name, setName] = useState("");
@@ -21,29 +21,30 @@ const AuthPage = ({ setUser }) => {
   /* ================= GOOGLE LOGIN ================= */
   const loginWithGoogle = async () => {
     setError("");
-    const { error } = await supabase.auth.signInWithOAuth({
+    await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
         redirectTo: window.location.origin,
       },
     });
-
-    if (error) setError(error.message);
   };
 
   /* ================= FORGOT PASSWORD ================= */
   const forgotPassword = async () => {
+    setError("");
+    setSuccess("");
+
     if (!email) {
-      setError("Enter your email first");
+      setError("Please enter your email first");
       return;
     }
 
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/auth`,
+      redirectTo: `${window.location.origin}/reset-password`,
     });
 
     if (error) setError(error.message);
-    else setSuccess("Password reset link sent to your email 📧");
+    else setSuccess("📧 Password reset link sent to your email");
   };
 
   /* ================= LOGIN / SIGNUP ================= */
@@ -55,22 +56,20 @@ const AuthPage = ({ setUser }) => {
 
     try {
       if (isLogin) {
-        // LOGIN
+        /* -------- LOGIN -------- */
         const { data, error } = await supabase.auth.signInWithPassword({
           email: email.trim().toLowerCase(),
-          password: password.trim(),
+          password,
         });
         if (error) throw error;
 
         const user = data.user;
 
-        const { data: profile, error: profileError } = await supabase
+        const { data: profile } = await supabase
           .from("profiles")
-          .select("id, email, name, college, phone, role")
+          .select("id, name, college, phone, role")
           .eq("id", user.id)
-          .maybeSingle();
-
-        if (profileError) throw profileError;
+          .single();
 
         const fullUser = { ...user, ...profile };
         setUser(fullUser);
@@ -79,10 +78,10 @@ const AuthPage = ({ setUser }) => {
           ? navigate("/admin/dashboard")
           : navigate("/user-dashboard");
       } else {
-        // SIGNUP
+        /* -------- SIGNUP -------- */
         const { data, error } = await supabase.auth.signUp({
           email: email.trim().toLowerCase(),
-          password: password.trim(),
+          password,
         });
         if (error) throw error;
 
@@ -104,7 +103,7 @@ const AuthPage = ({ setUser }) => {
         }
 
         setSuccess("✅ Signup successful! Verify your email.");
-        setTimeout(() => setIsLogin(true), 2500);
+        setTimeout(() => setIsLogin(true), 2000);
       }
     } catch (err) {
       setError(err.message || "Something went wrong");
@@ -114,9 +113,9 @@ const AuthPage = ({ setUser }) => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center p-4">
-      <div className="bg-gray-800/50 backdrop-blur-md rounded-xl p-8 border border-gray-700 max-w-md w-full">
-        <h2 className="text-2xl font-bold mb-6 text-center bg-gradient-to-r from-white to-pink-400 bg-clip-text text-transparent">
+    <div className="min-h-screen bg-gray-900 flex items-center justify-center text-white px-4">
+      <div className="bg-gray-800/60 backdrop-blur border border-gray-700 rounded-xl p-8 w-full max-w-md">
+        <h2 className="text-2xl font-bold mb-6 text-center">
           {isLogin ? "Login" : "Sign Up"}
         </h2>
 
@@ -189,11 +188,10 @@ const AuthPage = ({ setUser }) => {
             </button>
           </div>
 
-          {/* SUBMIT */}
           <button
             type="submit"
             disabled={loading}
-            className={`w-full py-2 rounded-lg font-semibold transition-all
+            className={`w-full py-2 rounded-lg font-semibold transition
               ${
                 loading
                   ? "bg-gray-600 cursor-not-allowed"
@@ -204,7 +202,6 @@ const AuthPage = ({ setUser }) => {
           </button>
         </form>
 
-        {/* FORGOT PASSWORD */}
         {isLogin && (
           <button
             onClick={forgotPassword}
@@ -214,7 +211,6 @@ const AuthPage = ({ setUser }) => {
           </button>
         )}
 
-        {/* GOOGLE LOGIN */}
         <button
           onClick={loginWithGoogle}
           className="mt-4 w-full py-2 rounded-lg bg-white text-black font-semibold"
@@ -222,21 +218,19 @@ const AuthPage = ({ setUser }) => {
           Continue with Google
         </button>
 
-        <div className="mt-6 text-center">
-          <p className="text-gray-400">
-            {isLogin ? "Don't have an account? " : "Already have an account? "}
-            <button
-              onClick={() => {
-                setIsLogin(!isLogin);
-                setError("");
-                setSuccess("");
-              }}
-              className="text-pink-400 hover:underline"
-            >
-              {isLogin ? "Sign Up" : "Login"}
-            </button>
-          </p>
-        </div>
+        <p className="mt-6 text-center text-gray-400">
+          {isLogin ? "Don't have an account? " : "Already have an account? "}
+          <button
+            onClick={() => {
+              setIsLogin(!isLogin);
+              setError("");
+              setSuccess("");
+            }}
+            className="text-pink-400 hover:underline"
+          >
+            {isLogin ? "Sign Up" : "Login"}
+          </button>
+        </p>
       </div>
     </div>
   );
