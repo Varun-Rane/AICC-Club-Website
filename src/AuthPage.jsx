@@ -11,6 +11,7 @@ const AuthPage = ({ setUser }) => {
 
   const [isLogin, setIsLogin] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
+  const [loginAsAdmin, setLoginAsAdmin] = useState(false);
 
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -71,12 +72,29 @@ const AuthPage = ({ setUser }) => {
           .eq("id", user.id)
           .single();
 
+        if (!profile) throw new Error("Profile not found");
+
+        // ❌ user trying admin without checkbox
+        if (profile.role === "admin" && !loginAsAdmin) {
+          await supabase.auth.signOut();
+          throw new Error("Please select 'Login as Admin' to access admin panel");
+        }
+
+        // ❌ checkbox checked but not admin
+        if (loginAsAdmin && profile.role !== "admin") {
+          await supabase.auth.signOut();
+          throw new Error("You are not authorized as Admin");
+        }
+
         const fullUser = { ...user, ...profile };
         setUser(fullUser);
 
-        fullUser.role === "admin"
-          ? navigate("/admin/dashboard")
-          : navigate("/user-dashboard");
+        // ✅ FINAL REDIRECT
+        if (profile.role === "admin") {
+          navigate("/admin/dashboard");
+        } else {
+          navigate("/user-dashboard");
+        }
       } else {
         /* -------- SIGNUP -------- */
         const { data, error } = await supabase.auth.signUp({
@@ -135,7 +153,6 @@ const AuthPage = ({ setUser }) => {
           {!isLogin && (
             <>
               <input
-                type="text"
                 placeholder="Name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
@@ -143,7 +160,6 @@ const AuthPage = ({ setUser }) => {
                 required
               />
               <input
-                type="text"
                 placeholder="College"
                 value={college}
                 onChange={(e) => setCollege(e.target.value)}
@@ -151,7 +167,6 @@ const AuthPage = ({ setUser }) => {
                 required
               />
               <input
-                type="tel"
                 placeholder="Phone"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
@@ -187,6 +202,18 @@ const AuthPage = ({ setUser }) => {
               {showPassword ? "Hide" : "Show"}
             </button>
           </div>
+
+          {/* ✅ LOGIN AS ADMIN */}
+          {isLogin && (
+            <label className="flex items-center gap-2 text-sm text-gray-300">
+              <input
+                type="checkbox"
+                checked={loginAsAdmin}
+                onChange={(e) => setLoginAsAdmin(e.target.checked)}
+              />
+              Login as Admin
+            </label>
+          )}
 
           <button
             type="submit"

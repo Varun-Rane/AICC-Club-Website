@@ -113,3 +113,20 @@ body,
 .animate-blink {
   animation: blink 1s infinite;
 }
+/* Disable animated / modern color backgrounds during export */
+.exporting * {
+  animation: none !important;
+  transition: none !important;
+  filter: none !important;
+}
+
+.exporting canvas,
+.exporting svg {
+  filter: none !important;
+}
+
+.exporting .dot-grid,
+.exporting [class*="dot"],
+.exporting [class*="grid"] {
+  display: none !important;
+}

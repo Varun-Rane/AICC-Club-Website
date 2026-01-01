@@ -1,5 +1,5 @@
 /* eslint-disable no-unused-vars */
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   PieChart,
   Pie,
@@ -8,14 +8,46 @@ import {
   Legend,
   ResponsiveContainer,
 } from "recharts";
-import { FiDownload, FiTrash2, FiUser } from "react-icons/fi";
+import { FiDownload } from "react-icons/fi";
 import * as XLSX from "xlsx";
-import { useCurrentPng } from "recharts-to-png";
-import { saveAs } from "file-saver";
 import { supabase } from "./supabaseClient";
 
 /* ================= CONSTANTS ================= */
 const COLORS = ["#3b82f6", "#ef4444", "#22c55e", "#f97316", "#a855f7"];
+
+/* ================= SVG → PNG ================= */
+const downloadSvgAsPng = (svg, fileName) => {
+  if (!svg) return;
+
+  const serializer = new XMLSerializer();
+  const svgStr = serializer.serializeToString(svg);
+
+  const canvas = document.createElement("canvas");
+  const ctx = canvas.getContext("2d");
+  const img = new Image();
+
+  const blob = new Blob([svgStr], {
+    type: "image/svg+xml;charset=utf-8",
+  });
+  const url = URL.createObjectURL(blob);
+
+  img.onload = () => {
+    canvas.width = img.width * 2;
+    canvas.height = img.height * 2;
+    ctx.scale(2, 2);
+    ctx.drawImage(img, 0, 0);
+
+    canvas.toBlob((png) => {
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(png);
+      a.download = fileName;
+      a.click();
+      URL.revokeObjectURL(url);
+    });
+  };
+
+  img.src = url;
+};
 
 /* ================= LOADER ================= */
 const DashboardLoader = () => (
@@ -40,7 +72,6 @@ const AdminDashboard = () => {
   const [selectedEvent, setSelectedEvent] = useState("ALL");
   const [loading, setLoading] = useState(true);
 
-  /* ================= FETCH ================= */
   useEffect(() => {
     fetchRegistrations();
   }, []);
@@ -64,6 +95,7 @@ const AdminDashboard = () => {
           date
         )
       `);
+
     setRegistrations(data || []);
     setLoading(false);
   };
@@ -71,7 +103,9 @@ const AdminDashboard = () => {
   /* ================= FILTER ================= */
   const eventList = useMemo(() => {
     const set = new Set();
-    registrations.forEach((r) => r.events?.event_name && set.add(r.events.event_name));
+    registrations.forEach(
+      (r) => r.events?.event_name && set.add(r.events.event_name)
+    );
     return ["ALL", ...Array.from(set)];
   }, [registrations]);
 
@@ -96,8 +130,7 @@ const AdminDashboard = () => {
       if (r.department)
         byDepartment[r.department] =
           (byDepartment[r.department] || 0) + 1;
-      if (r.gender)
-        byGender[r.gender] = (byGender[r.gender] || 0) + 1;
+      if (r.gender) byGender[r.gender] = (byGender[r.gender] || 0) + 1;
     });
 
     return { byBranch, byYear, byDepartment, byGender };
@@ -113,11 +146,6 @@ const AdminDashboard = () => {
       ];
     return entries.map(([name, value]) => ({ name, value }));
   };
-
-  const branchData = makePieData(stats.byBranch);
-  const yearData = makePieData(stats.byYear);
-  const departmentData = makePieData(stats.byDepartment);
-  const genderData = makePieData(stats.byGender);
 
   /* ================= EXPORT EXCEL ================= */
   const exportExcel = () => {
@@ -145,12 +173,9 @@ const AdminDashboard = () => {
 
   return (
     <div className="min-h-screen bg-gray-900 text-white p-10 pt-28">
-
       {/* HEADER */}
       <div className="flex justify-between items-center mb-8">
-        <h1 className="text-4xl font-bold text-pink-400">
-          Admin Dashboard
-        </h1>
+        <h1 className="text-4xl font-bold text-pink-400">Admin Dashboard</h1>
         <button
           onClick={exportExcel}
           className="px-6 py-3 bg-gradient-to-r from-pink-500 to-orange-500 rounded-lg flex items-center gap-2"
@@ -173,33 +198,80 @@ const AdminDashboard = () => {
         </select>
       </div>
 
-      {/* PIE CHARTS GRID */}
+      {/* CHARTS */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
-        <PieCard title="Branch Distribution" data={branchData} />
-        <PieCard title="Year Distribution" data={yearData} />
-        <PieCard title="Department Distribution" data={departmentData} />
-        <PieCard title="Gender Distribution" data={genderData} />
+        <PieCard title="Branch Distribution" data={makePieData(stats.byBranch)} />
+        <PieCard title="Year Distribution" data={makePieData(stats.byYear)} />
+        <PieCard
+          title="Department Distribution"
+          data={makePieData(stats.byDepartment)}
+        />
+        <PieCard title="Gender Distribution" data={makePieData(stats.byGender)} />
+      </div>
+
+      {/* TABLE */}
+      <div className="bg-gray-800/50 rounded-xl border border-gray-700 overflow-x-auto">
+        <table className="min-w-full text-sm">
+          <thead className="bg-gray-700">
+            <tr>
+              {[
+                "#",
+                "Name",
+                "Email",
+                "Phone",
+                "Branch",
+                "Year",
+                "Department",
+                "Gender",
+                "Event",
+                "Ticket",
+              ].map((h) => (
+                <th key={h} className="px-4 py-3 text-left">
+                  {h}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {filtered.map((r, i) => (
+              <tr
+                key={r.id}
+                className="border-t border-gray-700 hover:bg-gray-700/40"
+              >
+                <td className="px-4 py-2">{i + 1}</td>
+                <td className="px-4 py-2">{r.name}</td>
+                <td className="px-4 py-2">{r.email}</td>
+                <td className="px-4 py-2">{r.phone}</td>
+                <td className="px-4 py-2">{r.branch}</td>
+                <td className="px-4 py-2">{r.studying_year}</td>
+                <td className="px-4 py-2">{r.department}</td>
+                <td className="px-4 py-2">{r.gender}</td>
+                <td className="px-4 py-2">{r.events?.event_name}</td>
+                <td className="px-4 py-2">{r.ticket_id}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
     </div>
   );
 };
 
-/* ================= PIE CARD (WITH DOWNLOAD) ================= */
-
+/* ================= PIE CARD ================= */
 const PieCard = ({ title, data }) => {
-  const [getPng, { ref }] = useCurrentPng();
+  const chartRef = useRef(null);
 
-  const download = async () => {
-    const png = await getPng();
-    if (png) saveAs(png, `${title.replace(/\s/g, "_")}.png`);
+  const handleDownload = () => {
+    const svg = chartRef.current?.querySelector("svg");
+    downloadSvgAsPng(svg, `${title.replace(/\s/g, "_")}.png`);
   };
 
   return (
-    <div className="bg-gray-800/50 p-6 rounded-xl border border-gray-700 h-80">
-      <div className="flex justify-between items-center mb-2">
-        <h3 className="text-lg font-bold">{title}</h3>
+    <div className="bg-gray-800/50 p-4 rounded-xl border border-gray-700 h-[320px] flex flex-col">
+      <div className="flex justify-between items-center mb-2 shrink-0">
+        <h3 className="text-base font-semibold">{title}</h3>
         <button
-          onClick={download}
+          onClick={handleDownload}
           className="text-sm flex items-center gap-1 text-pink-400 hover:text-pink-300"
         >
           <FiDownload /> Download
@@ -207,18 +279,21 @@ const PieCard = ({ title, data }) => {
       </div>
 
       {data.length === 0 ? (
-        <p className="text-gray-400">No data</p>
+        <p className="text-gray-400 text-sm mt-6">No data</p>
       ) : (
-        <div ref={ref} className="w-full h-full">
-          <ResponsiveContainer width="100%" height="100%">
+        <div
+          ref={chartRef}
+          className="flex-1 flex items-center justify-center bg-gray-900 rounded-lg p-2"
+        >
+          <ResponsiveContainer width="100%" height={260}>
             <PieChart>
               <Pie
                 data={data}
                 dataKey="value"
                 nameKey="name"
-                cx="45%"
+                cx="50%"
                 cy="50%"
-                outerRadius={90}
+                outerRadius={85}
                 label={({ percent }) =>
                   percent > 0 ? `${(percent * 100).toFixed(1)}%` : ""
                 }
@@ -228,7 +303,12 @@ const PieCard = ({ title, data }) => {
                 ))}
               </Pie>
               <Tooltip />
-              <Legend layout="vertical" align="right" verticalAlign="middle" />
+              <Legend
+                layout="vertical"
+                align="right"
+                verticalAlign="middle"
+                wrapperStyle={{ fontSize: "12px" }}
+              />
             </PieChart>
           </ResponsiveContainer>
         </div>
