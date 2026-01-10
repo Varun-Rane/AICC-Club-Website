@@ -226,64 +226,53 @@ const EventsPage = () => {
 
   /* ===== REGISTER LOGIC ===== */
   const handleRegister = async ({
-    event,
-    name,
-    email,
-    phoneNo,
-    branch,
-    studyingYear,
-    department,
-    gender,
-  }) => {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+  event,
+  name,
+  email,
+  phoneNo,
+  branch,
+  studyingYear,
+  department,
+  gender,
+}) => {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
-    if (!user) {
-      alert("Please login first");
-      return;
-    }
+  if (!user) {
+    alert("Please login first");
+    return;
+  }
 
-    const { data: already } = await supabase
-      .from("registrations")
-      .select("id")
-      .eq("user_id", user.id)
-      .eq("event_id", event.id)
-      .maybeSingle();
+  // ❌ NO frontend seat check
+  // ❌ NO registrations.insert
+  // ❌ NO events.update
 
-    if (already) {
-      alert("You have already registered for this event ❌");
-      return;
-    }
+  const { error } = await supabase.rpc("register_for_event", {
+    event_id_input: event.id,
+    user_id_input: user.id,
+    name_input: name,
+    email_input: email,
+    phone_input: phoneNo,
+    branch_input: branch,
+    year_input: studyingYear,
+    dept_input: department,
+    gender_input: gender,
+  });
 
-    const hasSeat = event.available_seats > 0;
+  if (error) {
+    alert(error.message);
+    return;
+  }
 
-    await supabase.from("registrations").insert({
-      user_id: user.id,
-      event_id: event.id,
-      name,
-      email,
-      phone: phoneNo,
-      branch,
-      studying_year: studyingYear,
-      department,
-      gender,
-      ticket_id: hasSeat ? crypto.randomUUID() : null,
-      is_waitlisted: !hasSeat,
-      status: hasSeat ? "CONFIRMED" : "WAITLISTED",
-    });
+  /**
+   * RPC DB decide karega:
+   * - seat → CONFIRMED (QR)
+   * - no seat → WAITLISTED (NO QR)
+   */
+  return "SUCCESS";
+};
 
-    if (hasSeat) {
-      await supabase
-        .from("events")
-        .update({
-          available_seats: event.available_seats - 1,
-        })
-        .eq("id", event.id);
-    }
-
-    return hasSeat ? "CONFIRMED" : "WAITLISTED";
-  };
 
   /* ===== STATIC PAST EVENTS (4 CARDS) ===== */
   const pastEvents = [

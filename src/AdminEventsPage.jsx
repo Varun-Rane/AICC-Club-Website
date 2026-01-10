@@ -6,6 +6,7 @@ const AdminEventsPage = () => {
   const [events, setEvents] = useState([]);
   const [pageLoading, setPageLoading] = useState(true);
 
+  // ADD EVENT FORM
   const [eventName, setEventName] = useState("");
   const [date, setDate] = useState("");
   const [description, setDescription] = useState("");
@@ -13,30 +14,38 @@ const AdminEventsPage = () => {
   const [posterUrl, setPosterUrl] = useState("");
   const [registrationOpen, setRegistrationOpen] = useState(false);
   const [seats, setSeats] = useState(0);
-
   const [loading, setLoading] = useState(false);
+
+  // ADD SEATS (incremental)
   const [seatInputs, setSeatInputs] = useState({});
-  const [updatingSeatId, setUpdatingSeatId] = useState(null); // 🔥
+  const [updatingSeatId, setUpdatingSeatId] = useState(null);
 
   useEffect(() => {
     fetchEvents();
   }, []);
 
+  // ================= FETCH EVENTS =================
   const fetchEvents = async () => {
     setPageLoading(true);
 
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("events")
       .select("*")
       .order("date", { ascending: false });
 
+    if (error) {
+      console.error(error);
+      setPageLoading(false);
+      return;
+    }
+
     setEvents(data || []);
 
-    const initialSeats = {};
+    const seatMap = {};
     (data || []).forEach((e) => {
-      initialSeats[e.id] = e.available_seats;
+      seatMap[e.id] = 0; // means ADD seats
     });
-    setSeatInputs(initialSeats);
+    setSeatInputs(seatMap);
 
     setPageLoading(false);
   };
@@ -48,19 +57,15 @@ const AdminEventsPage = () => {
 
     setLoading(true);
 
-    const { data, error } = await supabase
-      .from("events")
-      .insert({
-        event_name: eventName.trim(),
-        date,
-        description: description.trim(),
-        location: location.trim(),
-        poster_url: posterUrl.trim(),
-        registration_open: registrationOpen,
-        available_seats: seats,
-      })
-      .select()
-      .single();
+    const { error } = await supabase.from("events").insert({
+      event_name: eventName.trim(),
+      date,
+      description: description.trim(),
+      location: location.trim(),
+      poster_url: posterUrl.trim(),
+      registration_open: registrationOpen,
+      available_seats: Number(seats),
+    });
 
     setLoading(false);
 
@@ -69,7 +74,7 @@ const AdminEventsPage = () => {
       return;
     }
 
-    fetchEvents();
+    await fetchEvents();
 
     setEventName("");
     setDate("");
@@ -78,6 +83,42 @@ const AdminEventsPage = () => {
     setPosterUrl("");
     setRegistrationOpen(false);
     setSeats(0);
+  };
+
+  // ================= ADD SEATS (FINAL FIX) =================
+  const handleUpdateSeats = async (id) => {
+    const addSeats = Number(seatInputs[id]);
+
+    if (Number.isNaN(addSeats) || addSeats <= 0) {
+      alert("Enter seats to ADD (must be > 0)");
+      return;
+    }
+
+    setUpdatingSeatId(id);
+
+    // 1️⃣ Add seats incrementally
+    const { error } = await supabase.rpc("add_event_seats", {
+      event_id_input: id,
+      seats_to_add: addSeats,
+    });
+
+    if (error) {
+      alert(error.message);
+      setUpdatingSeatId(null);
+      return;
+    }
+
+    // 2️⃣ Allocate seats to waitlisted users
+    const { error: rpcError } = await supabase.rpc("allocate_seats", {
+      event_id_input: id,
+    });
+
+    if (rpcError) {
+      console.error("allocate_seats failed:", rpcError.message);
+    }
+
+    await fetchEvents();
+    setUpdatingSeatId(null);
   };
 
   // ================= TOGGLE REGISTRATION =================
@@ -92,28 +133,6 @@ const AdminEventsPage = () => {
     fetchEvents();
   };
 
-  // ================= UPDATE SEATS (WITH LOADER) =================
-  const handleUpdateSeats = async (id) => {
-    const newSeats = Number(seatInputs[id]);
-    if (isNaN(newSeats) || newSeats < 0) return;
-
-    setUpdatingSeatId(id);
-
-    await supabase
-      .from("events")
-      .update({ available_seats: newSeats })
-      .eq("id", id);
-
-    try {
-      await supabase.rpc("allocate_seats", {
-        event_id_input: id,
-      });
-    } catch {}
-
-    await fetchEvents();
-    setUpdatingSeatId(null);
-  };
-
   // ================= DELETE EVENT =================
   const deleteEvent = async (e, id) => {
     e.preventDefault();
@@ -125,18 +144,16 @@ const AdminEventsPage = () => {
     fetchEvents();
   };
 
-  // ================= PAGE LOADER =================
+  // ================= LOADER =================
   if (pageLoading) {
     return (
-      <div className="fixed inset-0 bg-gray-900 flex items-center justify-center z-50">
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-12 h-12 border-4 border-pink-600 border-t-transparent rounded-full animate-spin"></div>
-          <p className="text-gray-400">Loading events...</p>
-        </div>
+      <div className="fixed inset-0 bg-gray-900 flex items-center justify-center">
+        <div className="w-12 h-12 border-4 border-pink-600 border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
 
+  // ================= UI =================
   return (
     <div className="min-h-screen bg-gray-900 text-white pt-28 p-8">
       <h1 className="text-4xl font-bold mb-10 text-center">
@@ -152,40 +169,35 @@ const AdminEventsPage = () => {
             placeholder="Event Name"
             className="w-full p-3 bg-gray-700 rounded"
           />
-
           <input
             type="date"
             value={date}
             onChange={(e) => setDate(e.target.value)}
             className="w-full p-3 bg-gray-700 rounded"
           />
-
           <textarea
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             placeholder="Description"
             className="w-full p-3 bg-gray-700 rounded"
           />
-
           <input
             value={location}
             onChange={(e) => setLocation(e.target.value)}
             placeholder="Location"
             className="w-full p-3 bg-gray-700 rounded"
           />
-
           <input
             value={posterUrl}
             onChange={(e) => setPosterUrl(e.target.value)}
             placeholder="Poster URL"
             className="w-full p-3 bg-gray-700 rounded"
           />
-
           <input
             type="number"
             value={seats}
             onChange={(e) => setSeats(Number(e.target.value))}
-            placeholder="Seats"
+            placeholder="Initial Seats"
             className="w-full p-3 bg-gray-700 rounded"
           />
 
@@ -199,7 +211,6 @@ const AdminEventsPage = () => {
           </label>
 
           <button
-            type="submit"
             disabled={loading}
             className="px-6 py-2 bg-pink-600 rounded"
           >
@@ -219,40 +230,34 @@ const AdminEventsPage = () => {
             <p className="text-gray-400">{event.date}</p>
             <p className="text-gray-300 mt-2">{event.description}</p>
 
-            <div className="flex flex-wrap gap-4 items-center mt-4">
+            {/* ✅ CURRENT AVAILABLE SEATS */}
+            <p className="text-yellow-400 mt-1 font-medium">
+              Available Seats: {event.available_seats}
+            </p>
+
+            <div className="flex gap-4 mt-4 items-center">
               <input
                 type="number"
                 value={seatInputs[event.id]}
                 onChange={(e) =>
                   setSeatInputs({
                     ...seatInputs,
-                    [event.id]: e.target.value,
+                    [event.id]: Number(e.target.value),
                   })
                 }
+                placeholder="+ Seats"
                 className="w-24 p-2 bg-gray-700 rounded"
               />
 
-              {/* UPDATE BUTTON WITH LOADER */}
               <button
-                type="button"
                 onClick={() => handleUpdateSeats(event.id)}
                 disabled={updatingSeatId === event.id}
-                className={`px-4 py-1 rounded flex items-center gap-2 ${
-                  updatingSeatId === event.id
-                    ? "bg-blue-400 cursor-not-allowed"
-                    : "bg-blue-600"
-                }`}
+                className="px-4 py-1 bg-blue-600 rounded"
               >
-                {updatingSeatId === event.id && (
-                  <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-                )}
-                {updatingSeatId === event.id
-                  ? "Updating..."
-                  : "Update Seats"}
+                {updatingSeatId === event.id ? "Updating..." : "Add Seats"}
               </button>
 
               <button
-                type="button"
                 onClick={(e) =>
                   toggleRegistration(
                     e,
@@ -270,7 +275,6 @@ const AdminEventsPage = () => {
               </button>
 
               <button
-                type="button"
                 onClick={(e) => deleteEvent(e, event.id)}
                 className="px-4 py-1 bg-red-700 rounded"
               >
