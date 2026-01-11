@@ -16,7 +16,7 @@ const AdminEventsPage = () => {
   const [seats, setSeats] = useState(0);
   const [loading, setLoading] = useState(false);
 
-  // ADD SEATS (incremental)
+  // ADD SEATS
   const [seatInputs, setSeatInputs] = useState({});
   const [updatingSeatId, setUpdatingSeatId] = useState(null);
 
@@ -43,7 +43,7 @@ const AdminEventsPage = () => {
 
     const seatMap = {};
     (data || []).forEach((e) => {
-      seatMap[e.id] = 0; // means ADD seats
+      seatMap[e.id] = 0;
     });
     setSeatInputs(seatMap);
 
@@ -85,41 +85,63 @@ const AdminEventsPage = () => {
     setSeats(0);
   };
 
-  // ================= ADD SEATS (FINAL FIX) =================
-  const handleUpdateSeats = async (id) => {
-    const addSeats = Number(seatInputs[id]);
+ // ================= ADD SEATS (FINAL FIX – SEAT + WAITING SYNC) =================
+const handleUpdateSeats = async (eventId) => {
+  const addSeats = Number(seatInputs[eventId]);
 
-    if (Number.isNaN(addSeats) || addSeats <= 0) {
-      alert("Enter seats to ADD (must be > 0)");
-      return;
-    }
+  if (Number.isNaN(addSeats) || addSeats <= 0) {
+    alert("Enter seats to ADD (must be > 0)");
+    return;
+  }
 
-    setUpdatingSeatId(id);
+  setUpdatingSeatId(eventId);
 
-    // 1️⃣ Add seats incrementally
-    const { error } = await supabase.rpc("add_event_seats", {
-      event_id_input: id,
-      seats_to_add: addSeats,
-    });
+  // 1️⃣ fetch current seats
+  const { data: eventRow, error: fetchError } = await supabase
+    .from("events")
+    .select("available_seats")
+    .eq("id", eventId)
+    .single();
 
-    if (error) {
-      alert(error.message);
-      setUpdatingSeatId(null);
-      return;
-    }
-
-    // 2️⃣ Allocate seats to waitlisted users
-    const { error: rpcError } = await supabase.rpc("allocate_seats", {
-      event_id_input: id,
-    });
-
-    if (rpcError) {
-      console.error("allocate_seats failed:", rpcError.message);
-    }
-
-    await fetchEvents();
+  if (fetchError) {
+    alert(fetchError.message);
     setUpdatingSeatId(null);
-  };
+    return;
+  }
+
+  const newSeats = eventRow.available_seats + addSeats;
+
+  // 2️⃣ update seats
+  const { error: updateError } = await supabase
+    .from("events")
+    .update({ available_seats: newSeats })
+    .eq("id", eventId);
+
+  if (updateError) {
+    alert(updateError.message);
+    setUpdatingSeatId(null);
+    return;
+  }
+
+  // 3️⃣ 🔥 IMPORTANT: sync seats with waiting users
+  // this will:
+  // - consume ALL available seats
+  // - give tickets to waiting users (FIFO)
+  const { error: rpcError } = await supabase.rpc(
+    "allocate_available_seats",
+    {
+      p_event_id: eventId,
+    }
+  );
+
+  if (rpcError) {
+    alert(rpcError.message);
+  }
+
+  await fetchEvents();
+  setUpdatingSeatId(null);
+};
+
 
   // ================= TOGGLE REGISTRATION =================
   const toggleRegistration = async (e, id, current) => {
@@ -210,10 +232,7 @@ const AdminEventsPage = () => {
             Registration Open
           </label>
 
-          <button
-            disabled={loading}
-            className="px-6 py-2 bg-pink-600 rounded"
-          >
+          <button disabled={loading} className="px-6 py-2 bg-pink-600 rounded">
             {loading ? "Adding..." : "Add Event"}
           </button>
         </form>
@@ -230,7 +249,6 @@ const AdminEventsPage = () => {
             <p className="text-gray-400">{event.date}</p>
             <p className="text-gray-300 mt-2">{event.description}</p>
 
-            {/* ✅ CURRENT AVAILABLE SEATS */}
             <p className="text-yellow-400 mt-1 font-medium">
               Available Seats: {event.available_seats}
             </p>
@@ -259,11 +277,7 @@ const AdminEventsPage = () => {
 
               <button
                 onClick={(e) =>
-                  toggleRegistration(
-                    e,
-                    event.id,
-                    event.registration_open
-                  )
+                  toggleRegistration(e, event.id, event.registration_open)
                 }
                 className={`px-4 py-1 rounded ${
                   event.registration_open
