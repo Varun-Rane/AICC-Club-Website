@@ -23,44 +23,6 @@ const EventsLoader = () => {
   );
 };
 
-/* ================= PAST EVENT CARD ================= */
-const EventCard = ({ title, date, description, images }) => {
-  const [currentIndex, setCurrentIndex] = useState(0);
-
-  useEffect(() => {
-    if (images.length > 1) {
-      const interval = setInterval(() => {
-        setCurrentIndex((prev) => (prev + 1) % images.length);
-      }, 3000);
-      return () => clearInterval(interval);
-    }
-  }, [images]);
-
-  return (
-    <motion.div
-      whileHover={{ scale: 1.03 }}
-      className="bg-gray-800 rounded-xl shadow-lg overflow-hidden
-                 w-full max-w-md mx-auto flex flex-col"
-    >
-      <div className="relative w-full aspect-[16/9] overflow-hidden">
-        <img
-          src={images[currentIndex]}
-          alt={title}
-          className="w-full h-full object-cover transition-all duration-500"
-        />
-      </div>
-
-      <div className="p-4 flex flex-col flex-1">
-        <h3 className="text-lg font-bold text-white">{title}</h3>
-        <p className="text-pink-400 text-sm mt-1">{date}</p>
-        <p className="text-gray-300 text-sm mt-3 line-clamp-3">
-          {description}
-        </p>
-      </div>
-    </motion.div>
-  );
-};
-
 /* ================= REGISTRATION MODAL ================= */
 const RegistrationModal = ({ event, onClose, onRegister }) => {
   const [formData, setFormData] = useState({
@@ -112,15 +74,11 @@ const RegistrationModal = ({ event, onClose, onRegister }) => {
                 />
               ))}
 
-              {/* ✅ STUDYING YEAR DROPDOWN */}
               <select
                 required
                 value={formData.studyingYear}
                 onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    studyingYear: e.target.value,
-                  })
+                  setFormData({ ...formData, studyingYear: e.target.value })
                 }
                 className="w-full p-2 rounded-lg bg-gray-800 text-white"
               >
@@ -136,10 +94,7 @@ const RegistrationModal = ({ event, onClose, onRegister }) => {
                 placeholder="department"
                 value={formData.department}
                 onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    department: e.target.value,
-                  })
+                  setFormData({ ...formData, department: e.target.value })
                 }
                 className="w-full p-2 rounded-lg bg-gray-800 text-white"
               />
@@ -148,7 +103,7 @@ const RegistrationModal = ({ event, onClose, onRegister }) => {
                 required
                 value={formData.gender}
                 onChange={(e) =>
-                  setFormData({ ...formData, gender: e.target.value })
+                  setFormData({ ...formformData, gender: e.target.value })
                 }
                 className="w-full p-2 rounded-lg bg-gray-800 text-white"
               >
@@ -210,10 +165,10 @@ const EventsPage = () => {
       setLoadingEvents(true);
       const today = new Date().toISOString();
 
+      // ✅ FETCH ALL UPCOMING EVENTS (OPEN + CLOSED)
       const { data } = await supabase
         .from("events")
         .select("*")
-        .eq("registration_open", true)
         .gte("date", today)
         .order("date", { ascending: true });
 
@@ -226,89 +181,46 @@ const EventsPage = () => {
 
   /* ===== REGISTER LOGIC ===== */
   const handleRegister = async ({
-  event,
-  name,
-  email,
-  phoneNo,
-  branch,
-  studyingYear,
-  department,
-  gender,
-}) => {
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+    event,
+    name,
+    email,
+    phoneNo,
+    branch,
+    studyingYear,
+    department,
+    gender,
+  }) => {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
-  if (!user) {
-    alert("Please login first");
-    return;
-  }
+    if (!user) {
+      alert("Please login first");
+      return;
+    }
 
-  // ❌ NO frontend seat check
-  // ❌ NO registrations.insert
-  // ❌ NO events.update
+    const { error } = await supabase.rpc("register_for_event", {
+      event_id_input: event.id,
+      user_id_input: user.id,
+      name_input: name,
+      email_input: email,
+      phone_input: phoneNo,
+      branch_input: branch,
+      year_input: studyingYear,
+      dept_input: department,
+      gender_input: gender,
+    });
 
-  const { error } = await supabase.rpc("register_for_event", {
-    event_id_input: event.id,
-    user_id_input: user.id,
-    name_input: name,
-    email_input: email,
-    phone_input: phoneNo,
-    branch_input: branch,
-    year_input: studyingYear,
-    dept_input: department,
-    gender_input: gender,
-  });
+    if (error) {
+      alert(error.message);
+      return;
+    }
 
-  if (error) {
-    alert(error.message);
-    return;
-  }
-
-  /**
-   * RPC DB decide karega:
-   * - seat → CONFIRMED (QR)
-   * - no seat → WAITLISTED (NO QR)
-   */
-  return "SUCCESS";
-};
-
-
-  /* ===== STATIC PAST EVENTS (4 CARDS) ===== */
-  const pastEvents = [
-    {
-      title: "AI Chatbot Competition",
-      date: "19 Sept 2024",
-      description:
-        "A 24-hour hackathon where participants built AI chatbots.",
-      images: ["/assets/events/chatbot1.png", "/assets/events/chatbot2.png"],
-    },
-    {
-      title: "CodeVista 5.0",
-      date: "25–28 Feb 2024",
-      description:
-        "National-level coding competition with multiple rounds.",
-      images: ["/assets/events/codevista1.png", "/assets/events/codevista2.png"],
-    },
-    {
-      title: "Gen AI Workshop",
-      date: "01 Feb 2024",
-      description:
-        "Hands-on workshop focused on Generative AI tools.",
-      images: ["/assets/events/genAI1.png", "/assets/events/genAI2.png"],
-    },
-    {
-      title: "AI Tools & Prompt Engineering",
-      date: "23 Aug 2024",
-      description:
-        "Interactive session on modern AI tools.",
-      images: ["/assets/events/prompt1.png", "/assets/events/prompt2.png"],
-    },
-  ];
+    return "SUCCESS";
+  };
 
   return (
     <div className="bg-gray-900 text-white pt-24 px-4 pb-24">
-      {/* UPCOMING EVENTS */}
       <section className="max-w-6xl mx-auto my-16">
         <h2 className="text-3xl font-bold text-center mb-12">
           Upcoming Events
@@ -336,36 +248,22 @@ const EventsPage = () => {
                 <h3 className="text-xl font-bold">{event.event_name}</h3>
                 <p className="text-gray-300">{event.description}</p>
 
-                <button
-                  onClick={() => setSelectedEvent(event)}
-                  className="mt-4 bg-gradient-to-r from-pink-500 to-orange-500 px-4 py-2 rounded-lg"
-                >
-                  Register
-                </button>
+                {event.registration_open ? (
+                  <button
+                    onClick={() => setSelectedEvent(event)}
+                    className="mt-4 bg-gradient-to-r from-pink-500 to-orange-500 px-4 py-2 rounded-lg"
+                  >
+                    Register
+                  </button>
+                ) : (
+                  <p className="mt-4 text-red-400 font-medium">
+                    Registration Closed
+                  </p>
+                )}
               </VerticalTimelineElement>
             ))}
           </VerticalTimeline>
         )}
-      </section>
-
-      {/* PAST EVENTS */}
-      <section className="max-w-6xl mx-auto my-16 px-4">
-        <motion.h2
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.6 }}
-          className="text-3xl font-bold text-center mb-12
-            bg-gradient-to-r from-white to-pink-400 bg-clip-text text-transparent"
-        >
-          Past Events
-        </motion.h2>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-10">
-          {pastEvents.map((event, index) => (
-            <EventCard key={index} {...event} />
-          ))}
-        </div>
       </section>
 
       {selectedEvent && (
