@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import './PolygonBackground.css';
+import "../styles/PolygonBackground.css";
 
 const PolygonBackground = () => {
   const polygonRefs = useRef([]);

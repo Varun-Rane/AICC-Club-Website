@@ -1,19 +1,23 @@
 import React, { useState, useEffect } from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
-import { supabase } from "./supabaseClient";
+import { supabase } from "./utils/supabaseClient";
 
-// ===== Components =====
-import Navigation from "./Navigation";
-import Home from "./Home";
-import AboutPage from "./AboutPage";
-import EventsPage from "./EventsPage";
-import Footer from "./Footer";
-import AuthPage from "./AuthPage";
-import ResetPassword from "./ResetPassword"; // ✅ ADDED
-import TeamPage from "./TeamPage";
-import UserDashboard from "./UserDashboard";
-import AdminDashboard from "./AdminDashboard";
-import AdminEventsPage from "./AdminEventsPage";
+// components
+import Navigation from "./components/Navigation";
+import Footer from "./components/Footer";
+
+// pages
+import Home from "./pages/Home";
+import AboutPage from "./pages/AboutPage";
+import EventsPage from "./pages/EventsPage";
+import TeamPage from "./pages/TeamPage";
+import AuthPage from "./pages/AuthPage";
+import ResetPassword from "./pages/ResetPassword";
+
+// dashboards
+import UserDashboard from "./user/UserDashboard";
+import AdminDashboard from "./admin/AdminDashboard";
+import AdminEventsPage from "./admin/AdminEventsPage";
 
 const App = () => {
   const [user, setUser] = useState(null);
@@ -93,7 +97,20 @@ const App = () => {
 
       <Routes>
         {/* ================= AUTH ================= */}
-        <Route path="/auth" element={<AuthPage setUser={setUser} />} />
+        <Route
+          path="/auth"
+          element={
+            user ? (
+              profile?.role === "admin" ? (
+                <Navigate to="/admin/dashboard" replace />
+              ) : (
+                <Navigate to="/" replace />
+              )
+            ) : (
+              <AuthPage setUser={setUser} />
+            )
+          }
+        />
 
         {/* 🔑 RESET PASSWORD (NO GUARD) */}
         <Route path="/reset-password" element={<ResetPassword />} />
@@ -103,11 +120,7 @@ const App = () => {
           path="/"
           element={
             <ProtectedRoute>
-              {profile?.role === "admin" ? (
-                <Navigate to="/admin/dashboard" replace />
-              ) : (
-                <Home />
-              )}
+              <Home />
             </ProtectedRoute>
           }
         />
@@ -125,11 +138,7 @@ const App = () => {
           path="/events"
           element={
             <ProtectedRoute>
-              {profile?.role === "admin" ? (
-                <Navigate to="/admin/events" replace />
-              ) : (
-                <EventsPage />
-              )}
+              <EventsPage />
             </ProtectedRoute>
           }
         />

@@ -6,7 +6,7 @@ import {
   VerticalTimelineElement,
 } from "react-vertical-timeline-component";
 import "react-vertical-timeline-component/style.min.css";
-import { supabase } from "./supabaseClient";
+import { supabase } from "../utils/supabaseClient";
 
 /* ================= LOADER ================= */
 const EventsLoader = () => {

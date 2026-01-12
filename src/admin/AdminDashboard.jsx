@@ -10,7 +10,7 @@ import {
 } from "recharts";
 import { FiDownload } from "react-icons/fi";
 import * as XLSX from "xlsx";
-import { supabase } from "./supabaseClient";
+import { supabase } from "../utils/supabaseClient";
 
 /* ================= CONSTANTS ================= */
 const COLORS = ["#3b82f6", "#ef4444", "#22c55e", "#f97316", "#a855f7"];

@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "./supabaseClient";
+import { supabase } from "../utils/supabaseClient";
 
 const AuthPage = ({ setUser }) => {
   const [name, setName] = useState("");
