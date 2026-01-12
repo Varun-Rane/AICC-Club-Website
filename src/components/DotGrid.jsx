@@ -183,6 +183,7 @@ const DotGrid = ({
   }, [buildGrid]);
 
   return (
+    
     <section
       className={`dot-grid absolute inset-0 w-full h-full pointer-events-none ${className}`}
       style={style}

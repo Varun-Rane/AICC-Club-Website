@@ -11,12 +11,12 @@ import ImageSlider from "../components/ImageSlider";
 
 const Home = () => {
   return (
-    <>
+    <div className="min-h-screen bg-gray-900 text-white pt-24 sm:pt-28">
       <HeroSection />
       <EventsSection />
       <FeaturesSection />
       <CTASection />
-    </>
+    </div>
   );
 };
 
