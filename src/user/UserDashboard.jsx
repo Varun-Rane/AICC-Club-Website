@@ -56,14 +56,10 @@ const UserDashboard = () => {
     setIsLoading(false);
   };
 
-  // 🔥 FIX: AUTO REFRESH DASHBOARD
+  // 🔄 AUTO REFRESH
   useEffect(() => {
     fetchData();
-
-    const interval = setInterval(() => {
-      fetchData();
-    }, 3000); // every 3 sec
-
+    const interval = setInterval(fetchData, 3000);
     return () => clearInterval(interval);
   }, []);
 
@@ -79,25 +75,34 @@ const UserDashboard = () => {
   // ================= DELETE TICKET =================
   const deleteTicket = async (registrationId) => {
     if (!window.confirm("Event is over. Delete this ticket?")) return;
-
     await supabase.from("registrations").delete().eq("id", registrationId);
-
     setRegistrations((prev) =>
       prev.filter((r) => r.id !== registrationId)
     );
   };
 
-  // ================= DOWNLOAD =================
+  // ================= ✅ FIXED DOWNLOAD =================
   const handleDownload = async () => {
     const ticketElement = document.getElementById("ticket-to-download");
     if (!ticketElement) return;
 
-    const canvas = await html2canvas(ticketElement, { scale: 2 });
-    const link = document.createElement("a");
-    link.download = `AICC-Ticket-${selectedTicket.ticket_id}.png`;
-    link.href = canvas.toDataURL("image/png");
-    link.click();
-    setSelectedTicket(null);
+    const canvas = await html2canvas(ticketElement, {
+      scale: 2,
+      useCORS: true,
+      backgroundColor: "#ffffff",
+    });
+
+    canvas.toBlob((blob) => {
+      if (!blob) return;
+
+      const url = URL.createObjectURL(blob);
+
+      // ✅ Browser-safe (PC + Mobile)
+      window.open(url, "_blank");
+
+      setTimeout(() => URL.revokeObjectURL(url), 10000);
+      setSelectedTicket(null);
+    }, "image/png");
   };
 
   // ================= LOADING =================
@@ -155,7 +160,7 @@ const UserDashboard = () => {
         </motion.div>
       </div>
 
-      {/* ================= REGISTERED EVENTS ================= */}
+      {/* ================= EVENTS ================= */}
       <div className="max-w-6xl mx-auto">
         <h2 className="text-3xl font-bold mb-8 bg-gradient-to-r from-white to-pink-400 bg-clip-text text-transparent">
           Your Registered Events
@@ -165,7 +170,7 @@ const UserDashboard = () => {
           <div className="space-y-6">
             {registrations.map((reg, index) => {
               const eventCompleted = isEventOver(reg.event.date);
-              const waitlisted = reg.ticket_id === null; // 🔥 single source of truth
+              const waitlisted = reg.ticket_id === null;
 
               return (
                 <motion.div
