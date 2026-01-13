@@ -83,27 +83,21 @@ const UserDashboard = () => {
 
   // ================= ✅ FIXED DOWNLOAD =================
   const handleDownload = async () => {
-    const ticketElement = document.getElementById("ticket-to-download");
-    if (!ticketElement) return;
+  const ticketElement = document.getElementById("ticket-to-download");
+  if (!ticketElement) return;
 
-    const canvas = await html2canvas(ticketElement, {
-      scale: 2,
-      useCORS: true,
-      backgroundColor: "#ffffff",
-    });
+  const canvas = await html2canvas(ticketElement, {
+    scale: 2,
+    useCORS: true,
+    backgroundColor: "#ffffff",
+  });
 
-    canvas.toBlob((blob) => {
-      if (!blob) return;
+  const imageUrl = canvas.toDataURL("image/png");
 
-      const url = URL.createObjectURL(blob);
+  // ✅ THIS ALWAYS WORKS
+  window.location.href = imageUrl;
+};
 
-      // ✅ Browser-safe (PC + Mobile)
-      window.open(url, "_blank");
-
-      setTimeout(() => URL.revokeObjectURL(url), 10000);
-      setSelectedTicket(null);
-    }, "image/png");
-  };
 
   // ================= LOADING =================
   if (isLoading) {
