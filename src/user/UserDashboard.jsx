@@ -3,7 +3,6 @@ import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import QRCode from "react-qr-code";
 import {
-  FiDownload,
   FiUser,
   FiCalendar,
   FiMail,
@@ -12,8 +11,8 @@ import {
   FiAward,
   FiX,
   FiTrash2,
+  FiEye,
 } from "react-icons/fi";
-import html2canvas from "html2canvas";
 import { createClient } from "@supabase/supabase-js";
 
 // ================= Supabase Setup =================
@@ -80,24 +79,6 @@ const UserDashboard = () => {
       prev.filter((r) => r.id !== registrationId)
     );
   };
-
-  // ================= ✅ FIXED DOWNLOAD =================
-  const handleDownload = async () => {
-  const ticketElement = document.getElementById("ticket-to-download");
-  if (!ticketElement) return;
-
-  const canvas = await html2canvas(ticketElement, {
-    scale: 2,
-    useCORS: true,
-    backgroundColor: "#ffffff",
-  });
-
-  const imageUrl = canvas.toDataURL("image/png");
-
-  // ✅ THIS ALWAYS WORKS
-  window.location.href = imageUrl;
-};
-
 
   // ================= LOADING =================
   if (isLoading) {
@@ -199,8 +180,8 @@ const UserDashboard = () => {
                         onClick={() => setSelectedTicket(reg)}
                         className="px-4 py-2 bg-gradient-to-r from-pink-500 to-orange-500 rounded-lg"
                       >
-                        <FiDownload className="inline mr-2" />
-                        Download Ticket
+                        <FiEye className="inline mr-2" />
+                        Preview Ticket
                       </button>
                     )}
                   </div>
@@ -215,13 +196,10 @@ const UserDashboard = () => {
         )}
       </div>
 
-      {/* ================= TICKET MODAL ================= */}
+      {/* ================= TICKET PREVIEW MODAL ================= */}
       {selectedTicket && selectedTicket.ticket_id && (
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50">
-          <div
-            id="ticket-to-download"
-            className="bg-white text-black rounded-xl p-8 w-full max-w-md relative"
-          >
+          <div className="bg-white text-black rounded-xl p-8 w-full max-w-md relative">
             <button
               onClick={() => setSelectedTicket(null)}
               className="absolute top-4 right-4"
@@ -247,11 +225,10 @@ const UserDashboard = () => {
             </div>
 
             <button
-              onClick={handleDownload}
-              className="w-full py-2 bg-gradient-to-r from-pink-500 to-orange-500 text-white rounded-lg"
+              onClick={() => setSelectedTicket(null)}
+              className="w-full py-2 bg-gray-800 text-white rounded-lg"
             >
-              <FiDownload className="inline mr-2" />
-              Download Ticket
+              Close Preview
             </button>
           </div>
         </div>
