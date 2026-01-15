@@ -7,6 +7,7 @@ import {
 } from "react-vertical-timeline-component";
 import "react-vertical-timeline-component/style.min.css";
 import { supabase } from "../utils/supabaseClient";
+import { useNavigate } from "react-router-dom";
 
 /* ================= LOADER ================= */
 const EventsLoader = () => (
@@ -39,11 +40,7 @@ const EventCard = ({ title, date, description, images }) => {
       whileHover={{ scale: 1.03 }}
       className="bg-gray-800 rounded-xl overflow-hidden shadow-lg"
     >
-      <img
-        src={images[index]}
-        alt={title}
-        className="w-full h-48 object-cover"
-      />
+      <img src={images[index]} alt={title} className="w-full h-48 object-cover" />
       <div className="p-4">
         <h3 className="text-lg font-bold">{title}</h3>
         <p className="text-pink-400 text-sm">{date}</p>
@@ -72,9 +69,11 @@ const RegistrationModal = ({ event, onClose, onRegister }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSubmitting(true);
-    await onRegister({ ...formData, event });
-    setDone(true);
+
+    const success = await onRegister({ ...formData, event });
+
     setSubmitting(false);
+    if (success) setDone(true);
   };
 
   return (
@@ -174,6 +173,8 @@ const RegistrationModal = ({ event, onClose, onRegister }) => {
 
 /* ================= EVENTS PAGE ================= */
 const EventsPage = () => {
+  const navigate = useNavigate();
+
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [upcomingEvents, setUpcomingEvents] = useState([]);
   const [registeredIds, setRegisteredIds] = useState([]);
@@ -211,6 +212,20 @@ const EventsPage = () => {
     loadData();
   }, []);
 
+  /* 🔒 REGISTER CLICK FIX (NO MODAL FOR GUESTS) */
+  const handleRegisterClick = async (event) => {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      navigate("/auth"); // 🔥 DIRECT REDIRECT
+      return;
+    }
+
+    setSelectedEvent(event); // ✅ ONLY LOGGED-IN USERS SEE FORM
+  };
+
   const handleRegister = async ({
     event,
     name,
@@ -225,10 +240,7 @@ const EventsPage = () => {
       data: { user },
     } = await supabase.auth.getUser();
 
-    if (!user) {
-      alert("Please login first");
-      return;
-    }
+    if (!user) return false;
 
     const { error } = await supabase.rpc("register_for_event", {
       event_id_input: event.id,
@@ -242,56 +254,61 @@ const EventsPage = () => {
       gender_input: gender,
     });
 
-    if (error) alert(error.message);
+    if (error) {
+      alert(error.message);
+      return false;
+    }
+
+    setRegisteredIds((prev) => [...prev, event.id]);
+    return true;
   };
 
   const pastEvents = [
-  {
-    title: "AI Chatbot Competition",
-    date: "19 Sept 2024",
-    description:
-      "A 24-hour hackathon where participants built intelligent AI chatbots.",
-    images: [
-      "/assets/events/chatbot1.png",
-      "/assets/events/chatbot2.png",
-      "/assets/events/chatbot3.png",
-    ],
-  },
-  {
-    title: "CodeVista 5.0",
-    date: "25–28 Feb 2024",
-    description:
-      "National-level coding competition with aptitude, coding & debugging rounds.",
-    images: [
-      "/assets/events/codevista1.png",
-      "/assets/events/codevista2.png",
-      "/assets/events/codevista3.png",
-    ],
-  },
-  {
-    title: "Gen AI Workshop",
-    date: "01 Feb 2024",
-    description:
-      "Hands-on workshop on Generative AI tools like ChatGPT & Midjourney.",
-    images: [
-      "/assets/events/genai1.png",
-      "/assets/events/genai2.png",
-      "/assets/events/genai3.png",
-    ],
-  },
-  {
-    title: "AI Tools & Prompt Engineering",
-    date: "23 Aug 2024",
-    description:
-      "Interactive session on modern AI tools and prompt engineering techniques.",
-    images: [
-      "/assets/events/prompt1.png",
-      "/assets/events/prompt2.png",
-      "/assets/events/prompt3.png",
-    ],
-  },
-];
-
+    {
+      title: "AI Chatbot Competition",
+      date: "19 Sept 2024",
+      description:
+        "A 24-hour hackathon where participants built intelligent AI chatbots.",
+      images: [
+        "/assets/events/chatbot1.png",
+        "/assets/events/chatbot2.png",
+        "/assets/events/chatbot3.png",
+      ],
+    },
+    {
+      title: "CodeVista 5.0",
+      date: "25–28 Feb 2024",
+      description:
+        "National-level coding competition with aptitude, coding & debugging rounds.",
+      images: [
+        "/assets/events/codevista1.png",
+        "/assets/events/codevista2.png",
+        "/assets/events/codevista3.png",
+      ],
+    },
+    {
+      title: "Gen AI Workshop",
+      date: "01 Feb 2024",
+      description:
+        "Hands-on workshop on Generative AI tools like ChatGPT & Midjourney.",
+      images: [
+        "/assets/events/genai1.png",
+        "/assets/events/genai2.png",
+        "/assets/events/genai3.png",
+      ],
+    },
+    {
+      title: "AI Tools & Prompt Engineering",
+      date: "23 Aug 2024",
+      description:
+        "Interactive session on modern AI tools and prompt engineering techniques.",
+      images: [
+        "/assets/events/prompt1.png",
+        "/assets/events/prompt2.png",
+        "/assets/events/prompt3.png",
+      ],
+    },
+  ];
 
   return (
     <div className="bg-gray-900 text-white pt-24 pb-24 px-4">
@@ -323,7 +340,7 @@ const EventsPage = () => {
                   </button>
                 ) : (
                   <button
-                    onClick={() => setSelectedEvent(event)}
+                    onClick={() => handleRegisterClick(event)}
                     className="mt-4 bg-gradient-to-r from-pink-500 to-orange-500 px-4 py-2 rounded"
                   >
                     Register
@@ -335,7 +352,7 @@ const EventsPage = () => {
         )}
       </section>
 
-      {/* PAST EVENTS */}
+      {/* PAST EVENTS — UNTOUCHED */}
       <section className="max-w-6xl mx-auto my-16">
         <h2 className="text-3xl font-bold text-center mb-12">Past Events</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">

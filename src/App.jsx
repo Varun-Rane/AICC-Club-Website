@@ -1,12 +1,17 @@
 import React, { useState, useEffect } from "react";
-import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  Navigate,
+} from "react-router-dom";
 import { supabase } from "./utils/supabaseClient";
 
 // components
 import Navigation from "./components/Navigation";
 import Footer from "./components/Footer";
 
-// pages
+// public pages
 import Home from "./pages/Home";
 import AboutPage from "./pages/AboutPage";
 import EventsPage from "./pages/EventsPage";
@@ -24,6 +29,7 @@ const App = () => {
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  /* ================= AUTH STATE ================= */
   useEffect(() => {
     const getUser = async () => {
       const {
@@ -69,21 +75,26 @@ const App = () => {
     return () => listener.subscription.unsubscribe();
   }, []);
 
+  /* ================= LOGOUT ================= */
   const handleLogout = async () => {
     await supabase.auth.signOut();
     setUser(null);
     setProfile(null);
   };
 
+  /* ================= ROUTE GUARDS ================= */
   const ProtectedRoute = ({ children }) => {
-    if (loading) return <div className="text-white text-center p-8">Loading...</div>;
+    if (loading)
+      return <div className="text-white text-center p-8">Loading...</div>;
     if (!user) return <Navigate to="/auth" replace />;
     return children;
   };
 
   const AdminRoute = ({ children }) => {
-    if (loading) return <div className="text-white text-center p-8">Loading...</div>;
-    if (profile?.role !== "admin") return <Navigate to="/" replace />;
+    if (loading)
+      return <div className="text-white text-center p-8">Loading...</div>;
+    if (!user || profile?.role !== "admin")
+      return <Navigate to="/" replace />;
     return children;
   };
 
@@ -96,6 +107,12 @@ const App = () => {
       />
 
       <Routes>
+        {/* ================= PUBLIC ROUTES ================= */}
+        <Route path="/" element={<Home />} />
+        <Route path="/about" element={<AboutPage />} />
+        <Route path="/events" element={<EventsPage />} />
+        <Route path="/teams" element={<TeamPage />} />
+
         {/* ================= AUTH ================= */}
         <Route
           path="/auth"
@@ -104,7 +121,7 @@ const App = () => {
               profile?.role === "admin" ? (
                 <Navigate to="/admin/dashboard" replace />
               ) : (
-                <Navigate to="/" replace />
+                <Navigate to="/user-dashboard" replace />
               )
             ) : (
               <AuthPage setUser={setUser} />
@@ -112,46 +129,9 @@ const App = () => {
           }
         />
 
-        {/* 🔑 RESET PASSWORD (NO GUARD) */}
         <Route path="/reset-password" element={<ResetPassword />} />
 
         {/* ================= USER ROUTES ================= */}
-        <Route
-          path="/"
-          element={
-            <ProtectedRoute>
-              <Home />
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/about"
-          element={
-            <ProtectedRoute>
-              <AboutPage />
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/events"
-          element={
-            <ProtectedRoute>
-              <EventsPage />
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/teams"
-          element={
-            <ProtectedRoute>
-              <TeamPage />
-            </ProtectedRoute>
-          }
-        />
-
         <Route
           path="/user-dashboard"
           element={
