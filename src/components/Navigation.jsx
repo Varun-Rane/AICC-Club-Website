@@ -78,19 +78,68 @@ const Navigation = ({ user, isAdmin, onLogout }) => {
             <nav className="flex items-center gap-2 lg:gap-4">
               {!isAdmin && (
                 <>
-                  <NavItem to="/" label="Home" icon={FiHome} active={isActive("/")} />
-                  <NavItem to="/about" label="About" icon={FiInfo} active={isActive("/about")} />
-                  <NavItem to="/events" label="Events" icon={FiCalendar} active={isActive("/events")} />
-                  <NavItem to="/teams" label="Team" icon={FiUsers} active={isActive("/teams")} />
-                  <NavItem to="/user-dashboard" label="Dashboard" icon={FiGrid} active={isActive("/user-dashboard")} />
+                  <NavItem
+                    to="/"
+                    label="Home"
+                    icon={FiHome}
+                    active={isActive("/")}
+                  />
+                  <NavItem
+                    to="/about"
+                    label="About"
+                    icon={FiInfo}
+                    active={isActive("/about")}
+                  />
+                  <NavItem
+                    to="/events"
+                    label="Events"
+                    icon={FiCalendar}
+                    active={isActive("/events")}
+                  />
+                  <NavItem
+                    to="/teams"
+                    label="Team"
+                    icon={FiUsers}
+                    active={isActive("/teams")}
+                  />
+                  {user ? (
+                    <NavItem
+                      to="/user-dashboard"
+                      label="Dashboard"
+                      icon={FiGrid}
+                      active={isActive("/user-dashboard")}
+                    />
+                  ) : (
+                    <NavItem
+                      to="/auth"
+                      label="Login"
+                      icon={FiLogOut}
+                      active={isActive("/auth")}
+                    />
+                  )}
                 </>
               )}
 
               {isAdmin && (
                 <>
-                  <NavItem to="/" label="Home" icon={FiHome} active={isActive("/")} />
-                  <NavItem to="/admin/dashboard" label="Dashboard" icon={FiGrid} active={isActive("/admin/dashboard")} />
-                  <NavItem to="/admin/events" label="Events" icon={FiCalendar} active={isActive("/admin/events")} />
+                  <NavItem
+                    to="/"
+                    label="Home"
+                    icon={FiHome}
+                    active={isActive("/")}
+                  />
+                  <NavItem
+                    to="/admin/dashboard"
+                    label="Dashboard"
+                    icon={FiGrid}
+                    active={isActive("/admin/dashboard")}
+                  />
+                  <NavItem
+                    to="/admin/events"
+                    label="Events"
+                    icon={FiCalendar}
+                    active={isActive("/admin/events")}
+                  />
                 </>
               )}
 

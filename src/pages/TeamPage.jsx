@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   FiUser,
@@ -11,302 +11,18 @@ import {
   FiCalendar,
   FiX,
 } from "react-icons/fi";
+import teamData from "../data/teamData";
 
-const NAVBAR_HEIGHT = 80;
+/* 🔥 LOAD TEAM IMAGES (VITE SAFE) */
+const teamImages = import.meta.glob(
+  "../assets/aiccTeam/*.{png,jpg,jpeg,webp}",
+  {
+    eager: true,
+    import: "default",
+  }
+);
 
 const TeamPage = () => {
-  const teamData = {
-    "Core Leads": {
-      head: {
-        name: "Parth Sakpal",
-        role: "President",
-        initials: "PS",
-        bio: "Leading the AI Coding Club.",
-        skills: [],
-        image: "",
-      },
-      coHeads: [
-        {
-          name: "Aditya Tandale",
-          role: "Vice President",
-          initials: "AT",
-          bio: "Supporting leadership and strategy.",
-          skills: [],
-          image: "",
-        },
-        {
-          name: "Manasi Dubey",
-          role: "Vice President",
-          initials: "MD",
-          bio: "Co-leading initiatives.",
-          skills: [],
-          image: "",
-        },
-        {
-          name: "Yamini Prasad",
-          role: "Secretary",
-          initials: "YP",
-          bio: "Managing administrative tasks.",
-          skills: [],
-          image: "",
-        },
-      ],
-    },
-
-    Technical: {
-      head: {
-        name: "Varun Rane",
-        role: "Head",
-        initials: "VR",
-        bio: "",
-        skills: [],
-        image: "",
-      },
-      coHeads: [
-        {
-          name: "Dinesh Bodhapalle",
-          role: "Co-Head",
-          initials: "DB",
-          bio: "",
-          skills: [],
-          image: "",
-        },
-        {
-          name: "Snehal Patil",
-          role: "Co-Head",
-          initials: "SP",
-          bio: "",
-          skills: [],
-          image: "",
-        },
-      ],
-    },
-
-    Competition: {
-      head: {
-        name: "Ayush Yadav",
-        role: "Head",
-        initials: "AY",
-        bio: "",
-        skills: [],
-        image: "",
-      },
-      coHeads: [
-        {
-          name: "Dnyanesh Mulay",
-          role: "Co-Head",
-          initials: "DM",
-          bio: "",
-          skills: [],
-          image: "",
-        },
-        {
-          name: "Digvijay Patil",
-          role: "Co-Head",
-          initials: "DP",
-          bio: "",
-          skills: [],
-          image: "",
-        },
-      ],
-    },
-
-    Design: {
-      head: {
-        name: "Swapnil Thakur",
-        role: "Head",
-        initials: "ST",
-        bio: "",
-        skills: [],
-        image: "",
-      },
-      coHeads: [
-        {
-          name: "Vansh Kalpesh Mapara",
-          role: "Co-Head",
-          initials: "VM",
-          bio: "",
-          skills: [],
-          image: "",
-        },
-      ],
-    },
-
-    Content: {
-      head: {
-        name: "Soham Jawlekar",
-        role: "Head",
-        initials: "SJ",
-        bio: "",
-        skills: [],
-        image: "",
-      },
-      coHeads: [
-        {
-          name: "Sajid Patel",
-          role: "Co-Head",
-          initials: "SP",
-          bio: "",
-          skills: [],
-          image: "",
-        },
-        {
-          name: "Raj Jaiswal",
-          role: "Co-Head",
-          initials: "RJ",
-          bio: "",
-          skills: [],
-          image: "",
-        },
-      ],
-    },
-
-    "Event Management": {
-      head: {
-        name: "Prajyot Lambe",
-        role: "Head",
-        initials: "PL",
-        bio: "",
-        skills: [],
-        image: "",
-      },
-      coHeads: [
-        {
-          name: "Maahi Borade",
-          role: "Co-Head",
-          initials: "MB",
-          bio: "",
-          skills: [],
-          image: "",
-        },
-        {
-          name: "Shreyash Myakalwar",
-          role: "Co-Head",
-          initials: "SM",
-          bio: "",
-          skills: [],
-          image: "",
-        },
-      ],
-    },
-
-    Documentation: {
-      head: {
-        name: "Latika Shahapurkar",
-        role: "Head",
-        initials: "LS",
-        bio: "",
-        skills: [],
-        image: "",
-      },
-      coHeads: [
-        {
-          name: "Khushi Nikam",
-          role: "Co-Head",
-          initials: "KN",
-          bio: "",
-          skills: [],
-          image: "",
-        },
-        {
-          name: "Atharva Tiwari",
-          role: "Co-Head",
-          initials: "AT",
-          bio: "",
-          skills: [],
-          image: "",
-        },
-      ],
-    },
-
-    "Public Relations": {
-      head: {
-        name: "Vivek Behera",
-        role: "Head",
-        initials: "VB",
-        bio: "",
-        skills: [],
-        image: "",
-      },
-      coHeads: [
-        {
-          name: "Siddharth Tripathi",
-          role: "Co-Head",
-          initials: "ST",
-          bio: "",
-          skills: [],
-          image: "",
-        },
-        {
-          name: "Akshay Wankhede",
-          role: "Co-Head",
-          initials: "AW",
-          bio: "",
-          skills: [],
-          image: "",
-        },
-        {
-          name: "Sakshi Kakadwar",
-          role: "Co-Head",
-          initials: "SK",
-          bio: "",
-          skills: [],
-          image: "",
-        },
-      ],
-    },
-
-    Marketing: {
-      head: {
-        name: "Mansi Dubey",
-        role: "Head",
-        initials: "MD",
-        bio: "",
-        skills: [],
-        image: "",
-      },
-      coHeads: [
-        {
-          name: "Shraddha Jagtap",
-          role: "Co-Head",
-          initials: "SJ",
-          bio: "",
-          skills: [],
-          image: "",
-        },
-        {
-          name: "Nandini Muley",
-          role: "Co-Head",
-          initials: "NM",
-          bio: "",
-          skills: [],
-          image: "",
-        },
-      ],
-    },
-
-    Treasury: {
-      head: {
-        name: "Yamini Prasad",
-        role: "Head",
-        initials: "YP",
-        bio: "",
-        skills: [],
-        image: "",
-      },
-      coHeads: [
-        {
-          name: "Tanmay Kadam",
-          role: "Co-Head",
-          initials: "TK",
-          bio: "",
-          skills: [],
-          image: "",
-        },
-      ],
-    },
-  };
-
   const departments = [
     { name: "Core Leads", icon: <FiUser /> },
     { name: "Technical", icon: <FiCode /> },
@@ -322,9 +38,12 @@ const TeamPage = () => {
 
   const [activeDepartment, setActiveDepartment] = useState("Technical");
   const [selectedMember, setSelectedMember] = useState(null);
-  const [showBio, setShowBio] = useState(false);
+  const [showProfile, setShowProfile] = useState(false);
 
   const activeTeam = teamData[activeDepartment];
+
+  const getImage = (member) =>
+    member?.image ? teamImages[`../assets/${member.image}`] : null;
 
   return (
     <div className="min-h-screen bg-gray-900 text-white pt-28 pb-16 px-4 md:px-8">
@@ -362,17 +81,29 @@ const TeamPage = () => {
               <div
                 onClick={() => {
                   setSelectedMember(activeTeam.head);
-                  setShowBio(true);
+                  setShowProfile(true);
                 }}
                 className="cursor-pointer flex flex-col items-center"
               >
-                <div className="w-40 h-40 bg-gray-800 rounded-xl flex items-center justify-center border-2 border-pink-500/30 mb-4">
-                  <span className="text-4xl font-bold">
-                    {activeTeam.head.initials}
-                  </span>
+                <div className="w-40 h-40 bg-gray-800 rounded-xl flex items-center justify-center border-2 border-pink-500/30 mb-4 overflow-hidden">
+                  {getImage(activeTeam.head) ? (
+                    <img
+                      src={getImage(activeTeam.head)}
+                      alt={activeTeam.head.name}
+                      className="w-full h-full object-cover object-top"
+                    />
+                  ) : (
+                    <span className="text-4xl font-bold">
+                      {activeTeam.head.initials}
+                    </span>
+                  )}
                 </div>
-                <h3 className="font-bold text-xl">{activeTeam.head.name}</h3>
-                <p className="text-pink-400">{activeTeam.head.role}</p>
+                <h3 className="font-bold text-xl">
+                  {activeTeam.head.name}
+                </h3>
+                <p className="text-pink-400">
+                  {activeTeam.head.role}
+                </p>
               </div>
             </div>
           )}
@@ -387,17 +118,29 @@ const TeamPage = () => {
                     key={coHead.name}
                     onClick={() => {
                       setSelectedMember(coHead);
-                      setShowBio(true);
+                      setShowProfile(true);
                     }}
                     className="cursor-pointer flex flex-col items-center"
                   >
-                    <div className="w-32 h-32 bg-gray-800 rounded-xl flex items-center justify-center border-2 border-orange-500/30 mb-4">
-                      <span className="text-3xl font-bold">
-                        {coHead.initials}
-                      </span>
+                    <div className="w-32 h-32 bg-gray-800 rounded-xl flex items-center justify-center border-2 border-orange-500/30 mb-4 overflow-hidden">
+                      {getImage(coHead) ? (
+                        <img
+                          src={getImage(coHead)}
+                          alt={coHead.name}
+                          className="w-full h-full object-cover object-top"
+                        />
+                      ) : (
+                        <span className="text-3xl font-bold">
+                          {coHead.initials}
+                        </span>
+                      )}
                     </div>
-                    <h3 className="font-bold text-lg">{coHead.name}</h3>
-                    <p className="text-orange-400 text-sm">{coHead.role}</p>
+                    <h3 className="font-bold text-lg">
+                      {coHead.name}
+                    </h3>
+                    <p className="text-orange-400 text-sm">
+                      {coHead.role}
+                    </p>
                   </div>
                 ))}
               </div>
@@ -406,31 +149,61 @@ const TeamPage = () => {
         </div>
       </div>
 
-      {/* Modal */}
+      {/* PROFILE MODAL (IMAGE + BIO) */}
       <AnimatePresence>
-        {showBio && selectedMember && (
+        {showProfile && selectedMember && (
           <motion.div
-            className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center"
-            onClick={() => setShowBio(false)}
+            className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center px-4"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setShowProfile(false)}
           >
             <motion.div
               onClick={(e) => e.stopPropagation()}
-              className="bg-gray-800 rounded-xl p-8 max-w-md w-full"
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              transition={{ duration: 0.3 }}
+              className="bg-gray-800 rounded-xl p-8 max-w-md w-full relative"
             >
-              <div className="flex justify-between mb-4">
-                <div>
-                  <h2 className="text-2xl font-bold">
-                    {selectedMember.name}
-                  </h2>
-                  <p className="text-pink-400">{selectedMember.role}</p>
-                </div>
-                <button onClick={() => setShowBio(false)}>
-                  <FiX size={24} />
-                </button>
+              {/* IMAGE — FULL FACE SAFE */}
+              <div className="w-40 h-40 mx-auto mb-6 bg-gray-700 rounded-xl overflow-hidden flex items-center justify-center">
+                {getImage(selectedMember) ? (
+                  <img
+                    src={getImage(selectedMember)}
+                    alt={selectedMember.name}
+                    className="w-full h-full object-contain"
+                  />
+                ) : (
+                  <span className="text-4xl font-bold">
+                    {selectedMember.initials}
+                  </span>
+                )}
               </div>
+
+              {/* NAME + ROLE */}
+              <div className="text-center mb-4">
+                <h2 className="text-2xl font-bold">
+                  {selectedMember.name}
+                </h2>
+                <p className="text-pink-400">
+                  {selectedMember.role}
+                </p>
+              </div>
+
+              {/* BIO */}
               <p className="text-gray-300 text-center">
-                {selectedMember.bio}
+                {selectedMember.bio || "No bio available."}
               </p>
+
+              {/* CLOSE */}
+              <button
+                onClick={() => setShowProfile(false)}
+                className="absolute top-5 right-5 text-white"
+              >
+                <FiX size={24} />
+              </button>
             </motion.div>
           </motion.div>
         )}

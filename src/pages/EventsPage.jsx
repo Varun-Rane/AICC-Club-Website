@@ -1,6 +1,6 @@
 /* eslint-disable no-unused-vars */
 import React, { useState, useEffect } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   VerticalTimeline,
   VerticalTimelineElement,
@@ -8,6 +8,16 @@ import {
 import "react-vertical-timeline-component/style.min.css";
 import { supabase } from "../utils/supabaseClient";
 import { useNavigate } from "react-router-dom";
+import pastEvents from "../data/pastEvents";
+
+/* 🔥 LOAD EVENT IMAGES */
+const eventImages = import.meta.glob(
+  "../assets/events/*.{png,jpg,jpeg,webp}",
+  {
+    eager: true,
+    import: "default",
+  }
+);
 
 /* ================= LOADER ================= */
 const EventsLoader = () => (
@@ -22,159 +32,128 @@ const EventsLoader = () => (
   </div>
 );
 
+/* ================= IMAGE MODAL ================= */
+const ImageModal = ({ images, startIndex, onClose }) => {
+  const [index, setIndex] = useState(startIndex);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center"
+      onClick={onClose}
+    >
+      <motion.img
+        key={index}
+        src={images[index]}
+        initial={{ scale: 0.9, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        exit={{ scale: 0.9, opacity: 0 }}
+        transition={{ duration: 0.3 }}
+        className="max-h-[80vh] max-w-[90vw] rounded-xl shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      />
+
+      <button
+        onClick={onClose}
+        className="absolute top-6 right-6 text-white text-3xl"
+      >
+        ✕
+      </button>
+
+      {images.length > 1 && (
+        <>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setIndex((i) => (i - 1 + images.length) % images.length);
+            }}
+            className="absolute left-6 text-white text-4xl"
+          >
+            ‹
+          </button>
+
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setIndex((i) => (i + 1) % images.length);
+            }}
+            className="absolute right-6 text-white text-4xl"
+          >
+            ›
+          </button>
+        </>
+      )}
+    </motion.div>
+  );
+};
+
 /* ================= PAST EVENT CARD ================= */
 const EventCard = ({ title, date, description, images }) => {
   const [index, setIndex] = useState(0);
+  const [open, setOpen] = useState(false);
 
   useEffect(() => {
     if (images.length > 1) {
       const interval = setInterval(() => {
         setIndex((prev) => (prev + 1) % images.length);
-      }, 3000);
+      }, 3500);
       return () => clearInterval(interval);
     }
   }, [images]);
 
-  return (
-    <motion.div
-      whileHover={{ scale: 1.03 }}
-      className="bg-gray-800 rounded-xl overflow-hidden shadow-lg"
-    >
-      <img src={images[index]} alt={title} className="w-full h-48 object-cover" />
-      <div className="p-4">
-        <h3 className="text-lg font-bold">{title}</h3>
-        <p className="text-pink-400 text-sm">{date}</p>
-        <p className="text-gray-300 text-sm mt-2">{description}</p>
-      </div>
-    </motion.div>
-  );
-};
-
-/* ================= REGISTRATION MODAL ================= */
-const RegistrationModal = ({ event, onClose, onRegister }) => {
-  const [formData, setFormData] = useState({
-    name: "",
-    rollNo: "",
-    phoneNo: "",
-    email: "",
-    branch: "",
-    studyingYear: "",
-    department: "",
-    gender: "",
-  });
-
-  const [submitting, setSubmitting] = useState(false);
-  const [done, setDone] = useState(false);
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setSubmitting(true);
-
-    const success = await onRegister({ ...formData, event });
-
-    setSubmitting(false);
-    if (success) setDone(true);
-  };
+  const resolvedImage = eventImages[`../assets/${images[index]}`];
 
   return (
-    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-      <div className="bg-gray-900 rounded-xl p-6 w-full max-w-md">
-        {!done ? (
-          <>
-            <h2 className="text-2xl font-bold mb-4">
-              Register for {event.event_name}
-            </h2>
+    <>
+      <motion.div
+        whileHover={{ scale: 1.03 }}
+        className="bg-gray-800 rounded-xl overflow-hidden shadow-lg cursor-pointer"
+      >
+        <div
+          className="relative h-48 overflow-hidden"
+          onClick={() => setOpen(true)}
+        >
+          <AnimatePresence mode="wait">
+            <motion.img
+              key={index}
+              src={resolvedImage}
+              alt={title}
+              initial={{ opacity: 0, scale: 1.05 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.6, ease: "easeInOut" }}
+              className="absolute inset-0 w-full h-full object-cover"
+            />
+          </AnimatePresence>
+        </div>
 
-            <form onSubmit={handleSubmit} className="space-y-4">
-              {["name", "rollNo", "phoneNo", "email", "branch"].map((f) => (
-                <input
-                  key={f}
-                  required
-                  placeholder={f}
-                  value={formData[f]}
-                  onChange={(e) =>
-                    setFormData({ ...formData, [f]: e.target.value })
-                  }
-                  className="w-full p-2 rounded bg-gray-800"
-                />
-              ))}
+        <div className="p-4">
+          <h3 className="text-lg font-bold">{title}</h3>
+          <p className="text-pink-400 text-sm">{date}</p>
+          <p className="text-gray-300 text-sm mt-2">{description}</p>
+        </div>
+      </motion.div>
 
-              <select
-                required
-                value={formData.studyingYear}
-                onChange={(e) =>
-                  setFormData({ ...formData, studyingYear: e.target.value })
-                }
-                className="w-full p-2 rounded bg-gray-800"
-              >
-                <option value="">Select Studying Year</option>
-                <option value="1st">1st</option>
-                <option value="2nd">2nd</option>
-                <option value="3rd">3rd</option>
-                <option value="4th">4th</option>
-              </select>
-
-              <input
-                required
-                placeholder="Department"
-                value={formData.department}
-                onChange={(e) =>
-                  setFormData({ ...formData, department: e.target.value })
-                }
-                className="w-full p-2 rounded bg-gray-800"
-              />
-
-              <select
-                required
-                value={formData.gender}
-                onChange={(e) =>
-                  setFormData({ ...formData, gender: e.target.value })
-                }
-                className="w-full p-2 rounded bg-gray-800"
-              >
-                <option value="">Select Gender</option>
-                <option value="Male">Male</option>
-                <option value="Female">Female</option>
-                <option value="Other">Other</option>
-              </select>
-
-              <div className="flex justify-end gap-2">
-                <button
-                  type="button"
-                  onClick={onClose}
-                  className="bg-gray-700 px-4 py-2 rounded"
-                >
-                  Cancel
-                </button>
-                <button
-                  disabled={submitting}
-                  className="bg-gradient-to-r from-pink-500 to-orange-500 px-4 py-2 rounded"
-                >
-                  {submitting ? "Submitting..." : "Submit"}
-                </button>
-              </div>
-            </form>
-          </>
-        ) : (
-          <>
-            <h2 className="text-xl font-bold">Registration Successful 🎉</h2>
-            <button
-              onClick={onClose}
-              className="mt-4 w-full bg-gradient-to-r from-pink-500 to-orange-500 py-2 rounded"
-            >
-              Close
-            </button>
-          </>
+      <AnimatePresence>
+        {open && (
+          <ImageModal
+            images={images.map(
+              (img) => eventImages[`../assets/${img}`]
+            )}
+            startIndex={index}
+            onClose={() => setOpen(false)}
+          />
         )}
-      </div>
-    </div>
+      </AnimatePresence>
+    </>
   );
 };
 
 /* ================= EVENTS PAGE ================= */
 const EventsPage = () => {
   const navigate = useNavigate();
-
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [upcomingEvents, setUpcomingEvents] = useState([]);
   const [registeredIds, setRegisteredIds] = useState([]);
@@ -212,18 +191,17 @@ const EventsPage = () => {
     loadData();
   }, []);
 
-  /* 🔒 REGISTER CLICK FIX (NO MODAL FOR GUESTS) */
   const handleRegisterClick = async (event) => {
     const {
       data: { user },
     } = await supabase.auth.getUser();
 
     if (!user) {
-      navigate("/auth"); // 🔥 DIRECT REDIRECT
+      navigate("/auth");
       return;
     }
 
-    setSelectedEvent(event); // ✅ ONLY LOGGED-IN USERS SEE FORM
+    setSelectedEvent(event);
   };
 
   const handleRegister = async ({
@@ -263,55 +241,9 @@ const EventsPage = () => {
     return true;
   };
 
-  const pastEvents = [
-    {
-      title: "AI Chatbot Competition",
-      date: "19 Sept 2024",
-      description:
-        "A 24-hour hackathon where participants built intelligent AI chatbots.",
-      images: [
-        "/assets/events/chatbot1.png",
-        "/assets/events/chatbot2.png",
-        "/assets/events/chatbot3.png",
-      ],
-    },
-    {
-      title: "CodeVista 5.0",
-      date: "25–28 Feb 2024",
-      description:
-        "National-level coding competition with aptitude, coding & debugging rounds.",
-      images: [
-        "/assets/events/codevista1.png",
-        "/assets/events/codevista2.png",
-        "/assets/events/codevista3.png",
-      ],
-    },
-    {
-      title: "Gen AI Workshop",
-      date: "01 Feb 2024",
-      description:
-        "Hands-on workshop on Generative AI tools like ChatGPT & Midjourney.",
-      images: [
-        "/assets/events/genai1.png",
-        "/assets/events/genai2.png",
-        "/assets/events/genai3.png",
-      ],
-    },
-    {
-      title: "AI Tools & Prompt Engineering",
-      date: "23 Aug 2024",
-      description:
-        "Interactive session on modern AI tools and prompt engineering techniques.",
-      images: [
-        "/assets/events/prompt1.png",
-        "/assets/events/prompt2.png",
-        "/assets/events/prompt3.png",
-      ],
-    },
-  ];
-
   return (
     <div className="bg-gray-900 text-white pt-24 pb-24 px-4">
+      {/* UPCOMING EVENTS */}
       <section className="max-w-6xl mx-auto my-16">
         <h2 className="text-3xl font-bold text-center mb-12">
           Upcoming Events
@@ -352,9 +284,11 @@ const EventsPage = () => {
         )}
       </section>
 
-      {/* PAST EVENTS — UNTOUCHED */}
+      {/* PAST EVENTS */}
       <section className="max-w-6xl mx-auto my-16">
-        <h2 className="text-3xl font-bold text-center mb-12">Past Events</h2>
+        <h2 className="text-3xl font-bold text-center mb-12">
+          Past Events
+        </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           {pastEvents.map((e, i) => (
             <EventCard key={i} {...e} />
