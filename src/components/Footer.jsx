@@ -40,7 +40,7 @@ const Footer = () => {
           <p className="text-xs text-gray-500">
             Built with ❤️ by{" "}
             <span className="text-gray-300 font-medium">
-              AICC Tech Team
+              AICC Tech Team || Varun Rane
             </span>
           </p>
 

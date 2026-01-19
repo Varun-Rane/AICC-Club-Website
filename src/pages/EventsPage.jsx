@@ -7,16 +7,12 @@ import {
 } from "react-vertical-timeline-component";
 import "react-vertical-timeline-component/style.min.css";
 import { supabase } from "../utils/supabaseClient";
-import { useNavigate } from "react-router-dom";
 import pastEvents from "../data/pastEvents";
 
-/* 🔥 LOAD EVENT IMAGES */
+/* ================= IMAGE MAP (VITE SAFE) ================= */
 const eventImages = import.meta.glob(
   "../assets/events/*.{png,jpg,jpeg,webp}",
-  {
-    eager: true,
-    import: "default",
-  }
+  { eager: true, import: "default" }
 );
 
 /* ================= LOADER ================= */
@@ -33,61 +29,31 @@ const EventsLoader = () => (
 );
 
 /* ================= IMAGE MODAL ================= */
-const ImageModal = ({ images, startIndex, onClose }) => {
-  const [index, setIndex] = useState(startIndex);
+const ImageModal = ({ src, onClose }) => (
+  <motion.div
+    initial={{ opacity: 0 }}
+    animate={{ opacity: 1 }}
+    exit={{ opacity: 0 }}
+    className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center"
+    onClick={onClose}
+  >
+    <motion.img
+      src={src}
+      initial={{ scale: 0.9, opacity: 0 }}
+      animate={{ scale: 1, opacity: 1 }}
+      transition={{ duration: 0.35, ease: "easeOut" }}
+      className="max-h-[85vh] max-w-[90vw] rounded-xl shadow-2xl"
+      onClick={(e) => e.stopPropagation()}
+    />
 
-  return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center"
+    <button
       onClick={onClose}
+      className="absolute top-6 right-6 text-white text-3xl"
     >
-      <motion.img
-        key={index}
-        src={images[index]}
-        initial={{ scale: 0.9, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        exit={{ scale: 0.9, opacity: 0 }}
-        transition={{ duration: 0.3 }}
-        className="max-h-[80vh] max-w-[90vw] rounded-xl shadow-2xl"
-        onClick={(e) => e.stopPropagation()}
-      />
-
-      <button
-        onClick={onClose}
-        className="absolute top-6 right-6 text-white text-3xl"
-      >
-        ✕
-      </button>
-
-      {images.length > 1 && (
-        <>
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              setIndex((i) => (i - 1 + images.length) % images.length);
-            }}
-            className="absolute left-6 text-white text-4xl"
-          >
-            ‹
-          </button>
-
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              setIndex((i) => (i + 1) % images.length);
-            }}
-            className="absolute right-6 text-white text-4xl"
-          >
-            ›
-          </button>
-        </>
-      )}
-    </motion.div>
-  );
-};
+      ✕
+    </button>
+  </motion.div>
+);
 
 /* ================= PAST EVENT CARD ================= */
 const EventCard = ({ title, date, description, images }) => {
@@ -103,7 +69,8 @@ const EventCard = ({ title, date, description, images }) => {
     }
   }, [images]);
 
-  const resolvedImage = eventImages[`../assets/${images[index]}`];
+  const resolvedImage =
+    eventImages[`../assets/${images[index]}`];
 
   return (
     <>
@@ -120,10 +87,10 @@ const EventCard = ({ title, date, description, images }) => {
               key={index}
               src={resolvedImage}
               alt={title}
-              initial={{ opacity: 0, scale: 1.05 }}
+              initial={{ opacity: 0, scale: 1.06 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0 }}
-              transition={{ duration: 0.6, ease: "easeInOut" }}
+              transition={{ duration: 0.8, ease: "easeInOut" }}
               className="absolute inset-0 w-full h-full object-cover"
             />
           </AnimatePresence>
@@ -139,10 +106,7 @@ const EventCard = ({ title, date, description, images }) => {
       <AnimatePresence>
         {open && (
           <ImageModal
-            images={images.map(
-              (img) => eventImages[`../assets/${img}`]
-            )}
-            startIndex={index}
+            src={resolvedImage}
             onClose={() => setOpen(false)}
           />
         )}
@@ -151,9 +115,129 @@ const EventCard = ({ title, date, description, images }) => {
   );
 };
 
+/* ================= REGISTRATION MODAL ================= */
+const RegistrationModal = ({ event, onClose, onRegister }) => {
+  const [formData, setFormData] = useState({
+    name: "",
+    rollNo: "",
+    phoneNo: "",
+    email: "",
+    branch: "",
+    studyingYear: "",
+    department: "",
+    gender: "",
+  });
+
+  const [submitting, setSubmitting] = useState(false);
+  const [done, setDone] = useState(false);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setSubmitting(true);
+
+    const success = await onRegister({ ...formData, event });
+    if (success) setDone(true);
+
+    setSubmitting(false);
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+      <div className="bg-gray-900 rounded-xl p-6 w-full max-w-md">
+        {!done ? (
+          <>
+            <h2 className="text-2xl font-bold mb-4">
+              Register for {event.event_name}
+            </h2>
+
+            <form onSubmit={handleSubmit} className="space-y-4">
+              {["name", "rollNo", "phoneNo", "email", "branch"].map((f) => (
+                <input
+                  key={f}
+                  required
+                  placeholder={f}
+                  value={formData[f]}
+                  onChange={(e) =>
+                    setFormData({ ...formData, [f]: e.target.value })
+                  }
+                  className="w-full p-2 rounded bg-gray-800"
+                />
+              ))}
+
+              <select
+                required
+                value={formData.studyingYear}
+                onChange={(e) =>
+                  setFormData({ ...formData, studyingYear: e.target.value })
+                }
+                className="w-full p-2 rounded bg-gray-800"
+              >
+                <option value="">Select Studying Year</option>
+                <option value="1st">1st</option>
+                <option value="2nd">2nd</option>
+                <option value="3rd">3rd</option>
+                <option value="4th">4th</option>
+              </select>
+
+              <input
+                required
+                placeholder="Department"
+                value={formData.department}
+                onChange={(e) =>
+                  setFormData({ ...formData, department: e.target.value })
+                }
+                className="w-full p-2 rounded bg-gray-800"
+              />
+
+              <select
+                required
+                value={formData.gender}
+                onChange={(e) =>
+                  setFormData({ ...formData, gender: e.target.value })
+                }
+                className="w-full p-2 rounded bg-gray-800"
+              >
+                <option value="">Select Gender</option>
+                <option value="Male">Male</option>
+                <option value="Female">Female</option>
+                <option value="Other">Other</option>
+              </select>
+
+              <div className="flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="bg-gray-700 px-4 py-2 rounded"
+                >
+                  Cancel
+                </button>
+                <button
+                  disabled={submitting}
+                  className="bg-gradient-to-r from-pink-500 to-orange-500 px-4 py-2 rounded"
+                >
+                  {submitting ? "Submitting..." : "Submit"}
+                </button>
+              </div>
+            </form>
+          </>
+        ) : (
+          <>
+            <h2 className="text-xl font-bold">Registration Successful 🎉</h2>
+            <button
+              onClick={onClose}
+              className="mt-4 w-full bg-gradient-to-r from-pink-500 to-orange-500 py-2 rounded"
+            >
+              Close
+            </button>
+          </>
+        )}
+      </div>
+    </div>
+  );
+};
+
 /* ================= EVENTS PAGE ================= */
 const EventsPage = () => {
-  const navigate = useNavigate();
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [upcomingEvents, setUpcomingEvents] = useState([]);
   const [registeredIds, setRegisteredIds] = useState([]);
@@ -191,19 +275,6 @@ const EventsPage = () => {
     loadData();
   }, []);
 
-  const handleRegisterClick = async (event) => {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) {
-      navigate("/auth");
-      return;
-    }
-
-    setSelectedEvent(event);
-  };
-
   const handleRegister = async ({
     event,
     name,
@@ -218,7 +289,10 @@ const EventsPage = () => {
       data: { user },
     } = await supabase.auth.getUser();
 
-    if (!user) return false;
+    if (!user) {
+      alert("Please login first");
+      return false;
+    }
 
     const { error } = await supabase.rpc("register_for_event", {
       event_id_input: event.id,
@@ -243,7 +317,6 @@ const EventsPage = () => {
 
   return (
     <div className="bg-gray-900 text-white pt-24 pb-24 px-4">
-      {/* UPCOMING EVENTS */}
       <section className="max-w-6xl mx-auto my-16">
         <h2 className="text-3xl font-bold text-center mb-12">
           Upcoming Events
@@ -272,7 +345,7 @@ const EventsPage = () => {
                   </button>
                 ) : (
                   <button
-                    onClick={() => handleRegisterClick(event)}
+                    onClick={() => setSelectedEvent(event)}
                     className="mt-4 bg-gradient-to-r from-pink-500 to-orange-500 px-4 py-2 rounded"
                   >
                     Register
@@ -284,7 +357,6 @@ const EventsPage = () => {
         )}
       </section>
 
-      {/* PAST EVENTS */}
       <section className="max-w-6xl mx-auto my-16">
         <h2 className="text-3xl font-bold text-center mb-12">
           Past Events
