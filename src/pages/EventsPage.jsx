@@ -8,6 +8,7 @@ import {
 import "react-vertical-timeline-component/style.min.css";
 import { supabase } from "../utils/supabaseClient";
 import pastEvents from "../data/pastEvents";
+import { useNavigate } from "react-router-dom";
 
 /* ================= IMAGE MAP (VITE SAFE) ================= */
 const eventImages = import.meta.glob(
@@ -45,7 +46,6 @@ const ImageModal = ({ src, onClose }) => (
       className="max-h-[85vh] max-w-[90vw] rounded-xl shadow-2xl"
       onClick={(e) => e.stopPropagation()}
     />
-
     <button
       onClick={onClose}
       className="absolute top-6 right-6 text-white text-3xl"
@@ -238,6 +238,7 @@ const RegistrationModal = ({ event, onClose, onRegister }) => {
 
 /* ================= EVENTS PAGE ================= */
 const EventsPage = () => {
+  const navigate = useNavigate();
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [upcomingEvents, setUpcomingEvents] = useState([]);
   const [registeredIds, setRegisteredIds] = useState([]);
@@ -289,10 +290,7 @@ const EventsPage = () => {
       data: { user },
     } = await supabase.auth.getUser();
 
-    if (!user) {
-      alert("Please login first");
-      return false;
-    }
+    if (!user) return false;
 
     const { error } = await supabase.rpc("register_for_event", {
       event_id_input: event.id,
@@ -345,7 +343,18 @@ const EventsPage = () => {
                   </button>
                 ) : (
                   <button
-                    onClick={() => setSelectedEvent(event)}
+                    onClick={async () => {
+                      const {
+                        data: { user },
+                      } = await supabase.auth.getUser();
+
+                      if (!user) {
+                        navigate("/auth");
+                        return;
+                      }
+
+                      setSelectedEvent(event);
+                    }}
                     className="mt-4 bg-gradient-to-r from-pink-500 to-orange-500 px-4 py-2 rounded"
                   >
                     Register
