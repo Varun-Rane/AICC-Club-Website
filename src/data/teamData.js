@@ -52,7 +52,7 @@ const teamData = {
         initials: "DB",
         bio: "",
         skills: [],
-        image: "",
+        image: "aiccTeam/Dinesh.png",
       },
       {
         name: "Snehal Patil",
