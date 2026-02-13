@@ -113,7 +113,7 @@ const AboutPage = () => {
         </motion.div>
       </section>
 
-      {/* Team Section */}
+      {/* Team Section
       <section className="max-w-6xl mx-auto my-12 sm:my-16 px-4">
         <motion.h2
           initial={{ opacity: 0, y: 20 }}
@@ -141,7 +141,7 @@ const AboutPage = () => {
             description="Dedicated to fostering a collaborative and creative environment for students."
           />
         </div>
-      </section>
+      </section> */}
 
       {/* Club Features */}
       <section className="max-w-6xl mx-auto my-12 sm:my-16 px-4">
